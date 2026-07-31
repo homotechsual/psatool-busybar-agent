@@ -171,6 +171,7 @@ dotnet sln add test/PsaToolAgent.Tests/PsaToolAgent.Tests.csproj
 - [ ] **Step 5: Add `.gitignore`**
 
 ```
+.superpowers/
 bin/
 obj/
 artifacts/
