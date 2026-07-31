@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/PsaToolAgent/PsaToolAgent.csproj" />
-  </Folder>
-  <Folder Name="/test/">
-    <Project Path="test/PsaToolAgent.Tests/PsaToolAgent.Tests.csproj" />
-  </Folder>
-</Solution>
