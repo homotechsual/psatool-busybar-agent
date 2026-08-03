@@ -27,8 +27,8 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
   API in Halo's admin UI) scoped to read-only ticket/SLA access only. Do not reuse an
   admin-scoped client, and do not leave `Psa:Halo:Scope` at its `all` default in production —
   set it to the specific read scope your Halo tenant exposes for ticket data.
-- **Container**: the image runs as a non-root user (`psatool`, uid 1000) with no extra
-  capabilities granted. Don't add `privileged: true` or extra `cap_add` entries to
+- **Container**: the image runs as a non-root user (`app`, the built-in .NET container user)
+  with no extra capabilities granted. Don't add `privileged: true` or extra `cap_add` entries to
   `docker-compose.yml` — nothing here needs them.
 
 ## Docker networking
@@ -43,7 +43,7 @@ from a container is a network-routing question, not a USB-passthrough one.
   network namespace. Two working options:
   1. **Bridge the adapter into WSL2**: share the BUSY Bar's USB-Ethernet adapter with the WSL2
      network via `wsl --shutdown` + a `.wslconfig` `[wsl2] networkingMode=mirrored` setting
-     (Windows 11 23H2+), which mirrors host network interfaces (including the USB-Ethernet one)
+     (Windows 11 22H2+), which mirrors host network interfaces (including the USB-Ethernet one)
      into WSL2 directly — then `network_mode: host` works as on Linux.
   2. **Run the worker directly on Windows instead of in Docker** for the BUSY Bar network hop —
      not using Docker at all is simpler than fighting WSL2 networking if mirrored mode isn't

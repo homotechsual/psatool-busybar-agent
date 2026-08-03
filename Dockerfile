@@ -7,8 +7,6 @@ RUN dotnet publish src/PsaToolAgent/PsaToolAgent.csproj -c Release -o /app --no-
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
-RUN addgroup --system --gid 1000 psatool \
-    && adduser --system --uid 1000 --ingroup psatool psatool
 COPY --from=build /app .
-USER psatool
+USER app
 ENTRYPOINT ["dotnet", "PsaToolAgent.dll"]
