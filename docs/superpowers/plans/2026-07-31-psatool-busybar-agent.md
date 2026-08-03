@@ -1604,7 +1604,7 @@ The BUSY Bar presents as a USB-Ethernet adapter with its own IP (e.g. `10.0.4.20
 from a container is a network-routing question, not a USB-passthrough one.
 
 - **Linux Docker host**: `network_mode: host` (already set in `docker-compose.yml`) is simplest —
-  the container shares the host's network stack and reaches the BUSY Bar exactly как the host does.
+  the container shares the host's network stack and reaches the BUSY Bar exactly as the host does.
 - **Windows (Docker Desktop / WSL2)**: `network_mode: host` does **not** expose host-only adapters
   (like the BUSY Bar's USB-Ethernet interface) into the WSL2 VM automatically — WSL2 has its own
   network namespace. Two working options:
