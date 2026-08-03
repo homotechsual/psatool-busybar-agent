@@ -1,0 +1,12 @@
+services:
+  psatool-busybar-agent:
+    build: .
+    restart: unless-stopped
+    # Linux Docker hosts: host networking is the simplest way to reach the BUSY Bar's
+    # USB-Ethernet IP. See README.md#docker-networking for the Windows/Docker Desktop equivalent.
+    network_mode: host
+    environment:
+      - Psa__Halo__ClientId=${HALO_CLIENT_ID}
+      - Psa__Halo__ClientSecret=${HALO_CLIENT_SECRET}
+      - Psa__Halo__BaseUrl=${HALO_BASE_URL}
+      - BusyBar__Address=${BUSYBAR_ADDRESS:-10.0.4.20}
