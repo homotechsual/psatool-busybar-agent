@@ -28,6 +28,7 @@ public class BusyBarRendererTests
         Assert.Contains("\"text\":\"WRC SERVICE DESK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"P1:2 P2:5\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"SLA: OK\"", handler.LastRequestBody);
+        Assert.Contains("\"color\":\"#FFFFFFFF\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -64,6 +65,7 @@ public class BusyBarRendererTests
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"12m REMAIN\"", handler.LastRequestBody);
+        Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -91,5 +93,6 @@ public class BusyBarRendererTests
         Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count:3\"", handler.LastRequestBody);
+        Assert.Contains("\"color\":\"#FF0000FF\"", handler.LastRequestBody);
     }
 }

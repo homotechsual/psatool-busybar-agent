@@ -7,6 +7,13 @@ public sealed class BusyBarRenderer
 {
     private const string ApplicationName = "psatool_busybar_agent";
 
+    // #RRGGBBAA, matching TextElement.Color's format. A traffic-light scheme so urgency is
+    // visible at a glance without reading the text: white/neutral when calm, amber for an
+    // SLA-risk warning, red for critical (P1 or VIP open).
+    private const string NormalColor = "#FFFFFFFF";
+    private const string SlaWarningColor = "#FFA500FF";
+    private const string CriticalColor = "#FF0000FF";
+
     private readonly Busy.Bar.BusyBar _bar;
     private readonly DashboardOptions _options;
 
@@ -39,19 +46,19 @@ public sealed class BusyBarRenderer
     {
         var headerText = string.IsNullOrWhiteSpace(organizationName) ? _options.HeaderText : organizationName;
         var thirdLine = state.UnassignedCount > 0 ? $"UNASSIGN:{state.UnassignedCount}" : "SLA: OK";
-        return DrawAsync(new[] { headerText, $"P1:{state.Rank1Count} P2:{state.Rank2Count}", thirdLine }, cancellationToken);
+        return DrawAsync(new[] { headerText, $"P1:{state.Rank1Count} P2:{state.Rank2Count}", thirdLine }, NormalColor, cancellationToken);
     }
 
     private Task RenderSlaWarningAsync(SlaWarningDashboardState state, CancellationToken cancellationToken)
     {
         var thirdLine = state.MinutesRemaining <= 0 ? "BREACHED" : $"{state.MinutesRemaining}m REMAIN";
-        return DrawAsync(new[] { "SLA RISK", $"Ticket #{state.TicketId}", thirdLine }, cancellationToken);
+        return DrawAsync(new[] { "SLA RISK", $"Ticket #{state.TicketId}", thirdLine }, SlaWarningColor, cancellationToken);
     }
 
     private Task RenderCriticalAsync(CriticalDashboardState state, CancellationToken cancellationToken)
-        => DrawAsync(new[] { "CRITICAL", state.Reason, $"Count:{state.Count}" }, cancellationToken);
+        => DrawAsync(new[] { "CRITICAL", state.Reason, $"Count:{state.Count}" }, CriticalColor, cancellationToken);
 
-    private Task DrawAsync(IReadOnlyList<string> lines, CancellationToken cancellationToken)
+    private Task DrawAsync(IReadOnlyList<string> lines, string color, CancellationToken cancellationToken)
     {
         var elements = new List<Busy.Bar.DisplayElement>(lines.Count);
         for (var i = 0; i < lines.Count; i++)
@@ -66,7 +73,8 @@ public sealed class BusyBarRenderer
                 // tight fit for 3 lines — verify against a real device and adjust Y spacing, or drop to
                 // 2 lines / use ScrollRate for long text, if anything still overlaps or clips.
                 Font = Busy.Bar.TextFont.Tiny,
-                Y = i * 5
+                Y = i * 5,
+                Color = color
             });
         }
 
