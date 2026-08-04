@@ -2,6 +2,13 @@ services:
   psatool-busybar-agent:
     build: .
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     # Linux Docker hosts: host networking is the simplest way to reach the BUSY Bar's
     # USB-Ethernet IP. See README.md#docker-networking for the Windows/Docker Desktop equivalent.
     network_mode: host

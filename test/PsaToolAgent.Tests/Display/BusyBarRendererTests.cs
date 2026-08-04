@@ -55,6 +55,20 @@ public class BusyBarRendererTests
     }
 
     [Fact]
+    public async Task RenderAsync_SlaWarning_ShowsBreached_WhenMinutesRemainingIsZeroOrNegative()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new SlaWarningDashboardState { TicketId = "101", MinutesRemaining = -30 };
+
+        await renderer.RenderAsync(state, CancellationToken.None);
+
+        Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"BREACHED\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"-30m REMAIN\"", handler.LastRequestBody);
+    }
+
+    [Fact]
     public async Task RenderAsync_Critical_ShowsReasonAndCount()
     {
         var (renderer, handler) = CreateRenderer();

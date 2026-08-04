@@ -47,6 +47,16 @@ public sealed class HaloAuthClient
         return _cachedToken;
     }
 
+    /// <summary>Clears the cached token, forcing the next <see cref="GetAccessTokenAsync"/> call to
+    /// re-authenticate. Call this after a downstream 401 — Halo can reject a cached token before its
+    /// stated expiry (rotated secret, disabled API client), and without this the poll loop would keep
+    /// retrying the same dead token until it naturally expires.</summary>
+    public void InvalidateToken()
+    {
+        _cachedToken = null;
+        _tokenExpiresAt = DateTimeOffset.MinValue;
+    }
+
     private sealed record TokenResponse(
         [property: JsonPropertyName("access_token")] string AccessToken,
         [property: JsonPropertyName("expires_in")] int ExpiresIn);

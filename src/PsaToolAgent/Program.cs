@@ -8,15 +8,28 @@ using PsaToolAgent.Psa.Halo;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.Configure<PsaOptions>(builder.Configuration.GetSection(PsaOptions.SectionName));
-builder.Services.Configure<HaloOptions>(builder.Configuration.GetSection(HaloOptions.SectionName));
-builder.Services.Configure<BusyBarOptions>(builder.Configuration.GetSection(BusyBarOptions.SectionName));
-builder.Services.Configure<DashboardOptions>(builder.Configuration.GetSection(DashboardOptions.SectionName));
+builder.Services.AddOptions<PsaOptions>()
+    .Bind(builder.Configuration.GetSection(PsaOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<HaloOptions>()
+    .Bind(builder.Configuration.GetSection(HaloOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<BusyBarOptions>()
+    .Bind(builder.Configuration.GetSection(BusyBarOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<DashboardOptions>()
+    .Bind(builder.Configuration.GetSection(DashboardOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 builder.Services.AddHttpClient<HaloAuthClient>((provider, client) =>
 {
     var options = provider.GetRequiredService<IOptions<HaloOptions>>().Value;
     client.BaseAddress = new Uri(options.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 var psaProviderName = builder.Configuration.GetSection(PsaOptions.SectionName)["Provider"];
@@ -26,6 +39,7 @@ if (string.Equals(psaProviderName, "Halo", StringComparison.OrdinalIgnoreCase))
     {
         var options = provider.GetRequiredService<IOptions<HaloOptions>>().Value;
         client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
     });
 }
 else
@@ -33,6 +47,9 @@ else
     throw new InvalidOperationException($"Unknown Psa:Provider '{psaProviderName}'. Supported: Halo.");
 }
 
+// AddHttpClient<HaloAuthClient> / AddHttpClient<IPsaDataProvider, HaloPsaDataProvider> register both as
+// transient — safe here only because PollingBackgroundService (a singleton hosted service) resolves and
+// holds one instance of each for the app's lifetime, rather than re-resolving per poll.
 builder.Services.AddSingleton(provider =>
 {
     var options = provider.GetRequiredService<IOptions<BusyBarOptions>>().Value;

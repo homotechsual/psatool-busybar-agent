@@ -17,7 +17,7 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
 | `Psa:SlaRiskThresholdMinutes` | `60` | A ticket is "SLA-risk" at or below this many minutes to breach. |
 | `Psa:Halo:BaseUrl` | — | Your Halo tenant's API base URL. |
 | `Psa:Halo:ClientId` / `ClientSecret` | — | OAuth2 client-credentials — secrets, set via env/user-secrets. |
-| `Psa:Halo:Scope` | `all` | OAuth2 scope requested. **Set this to the minimum your Halo API client is actually granted** — see Least Privilege below. |
+| `Psa:Halo:Scope` | `read:tickets` | OAuth2 scope requested. **Set this to the minimum your Halo API client is actually granted** — see Least Privilege below. |
 | `BusyBar:Address` | `10.0.4.20` | Network address of the BUSY Bar device. |
 | `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the NORMAL-mode display. |
 
@@ -25,10 +25,14 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
 
 - **Halo API client**: register a dedicated Halo API client (Configuration → Integrations → Halo
   API in Halo's admin UI) scoped to read-only ticket/SLA access only. Do not reuse an
-  admin-scoped client, and do not leave `Psa:Halo:Scope` at its `all` default in production —
-  set it to the specific read scope your Halo tenant exposes for ticket data.
+  admin-scoped client, and confirm `Psa:Halo:Scope` matches the specific read-only scope your
+  Halo tenant exposes for ticket data — the shipped default (`read:tickets`) is a reasonable
+  starting point, but you must verify a scope of that name actually exists and is granted to your
+  API client in your tenant.
 - **Container**: the image runs as a non-root user (`app`, the built-in .NET container user)
-  with no extra capabilities granted. Don't add `privileged: true` or extra `cap_add` entries to
+  with no extra capabilities granted. `docker-compose.yml` additionally drops all Linux
+  capabilities (`cap_drop: ALL`), sets `no-new-privileges`, and mounts the root filesystem
+  read-only with a `tmpfs` `/tmp`. Don't add `privileged: true` or extra `cap_add` entries to
   `docker-compose.yml` — nothing here needs them.
 
 ## Docker networking
@@ -49,7 +53,9 @@ from a container is a network-routing question, not a USB-passthrough one.
      not using Docker at all is simpler than fighting WSL2 networking if mirrored mode isn't
      available on your Windows build.
 
-  Verify actual reachability once deployed with: `docker exec psatool-busybar-agent curl -sf http://<BusyBar address>/api/version`.
+  Verify actual reachability once deployed with: `curl -sf http://<BusyBar address>/api/version`.
+  Run this from the Docker host itself (or any machine on the same network as the BUSY Bar), not
+  from inside the container — the runtime image ships no `curl`.
 
 ## Development
 

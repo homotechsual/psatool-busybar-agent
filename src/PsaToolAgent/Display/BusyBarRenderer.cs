@@ -32,7 +32,10 @@ public sealed class BusyBarRenderer
     }
 
     private Task RenderSlaWarningAsync(SlaWarningDashboardState state, CancellationToken cancellationToken)
-        => DrawAsync(new[] { "SLA RISK", $"Ticket #{state.TicketId}", $"{state.MinutesRemaining}m REMAIN" }, cancellationToken);
+    {
+        var thirdLine = state.MinutesRemaining <= 0 ? "BREACHED" : $"{state.MinutesRemaining}m REMAIN";
+        return DrawAsync(new[] { "SLA RISK", $"Ticket #{state.TicketId}", thirdLine }, cancellationToken);
+    }
 
     private Task RenderCriticalAsync(CriticalDashboardState state, CancellationToken cancellationToken)
         => DrawAsync(new[] { "CRITICAL", state.Reason, $"Count:{state.Count}" }, cancellationToken);
