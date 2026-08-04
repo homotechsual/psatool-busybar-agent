@@ -58,4 +58,35 @@ public class PollingBackgroundServiceTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    public async Task StopAsync_ClearsTheDisplay()
+    {
+        var (service, handler, _) = CreateService();
+        await service.StartAsync(CancellationToken.None);
+
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.Contains(handler.Requests, r => r.Method == HttpMethod.Delete && r.RequestUri!.AbsolutePath.Contains("display/draw"));
+    }
+
+    [Fact]
+    public async Task StopAsync_DoesNotThrow_WhenClearFails()
+    {
+        var handler = new FakeHttpMessageHandler
+        {
+            Respond = _ => new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
+        };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://10.0.4.20/") };
+        var bar = new Busy.Bar.BusyBar(http, new Busy.Bar.BusyBarOptions());
+        var renderer = new BusyBarRenderer(bar, Options.Create(new DashboardOptions()));
+        var provider = new StubPsaDataProvider();
+        var options = Options.Create(new PsaOptions { Provider = "Stub", PollIntervalSeconds = 60, SlaRiskThresholdMinutes = 60 });
+        var service = new PollingBackgroundService(provider, renderer, options, NullLogger<PollingBackgroundService>.Instance);
+        await service.StartAsync(CancellationToken.None);
+
+        var exception = await Record.ExceptionAsync(() => service.StopAsync(CancellationToken.None));
+
+        Assert.Null(exception);
+    }
 }
