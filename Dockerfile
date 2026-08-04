@@ -1,12 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+COPY src/PsaToolAgent/PsaToolAgent.csproj src/PsaToolAgent/
+RUN dotnet restore src/PsaToolAgent/PsaToolAgent.csproj
 COPY src/PsaToolAgent/ src/PsaToolAgent/
-# A separate `dotnet restore` layer followed by `dotnet publish --no-restore` is a common caching
-# optimization, but it's unreliable with this project's current package set on SDK 10.0.302 — a
-# fresh restore followed by --no-restore publish fails (confirmed reproducible both in this
-# container and directly on a Windows host, with different symptoms in each: NETSDK1064 here,
-# MSB3094 on Windows). Restoring as part of publish avoids the split entirely.
-RUN dotnet publish src/PsaToolAgent/PsaToolAgent.csproj -c Release -o /app
+RUN dotnet publish src/PsaToolAgent/PsaToolAgent.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
