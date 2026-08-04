@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace PsaToolAgent.Psa.Halo;
 
@@ -9,12 +10,17 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
 {
     private readonly HttpClient _http;
     private readonly HaloAuthClient _auth;
+    private readonly HaloOptions _haloOptions;
     private readonly ILogger<HaloPsaDataProvider> _logger;
 
-    public HaloPsaDataProvider(HttpClient http, HaloAuthClient auth, ILogger<HaloPsaDataProvider> logger)
+    private string? _organizationName;
+    private bool _organizationNameFetched;
+
+    public HaloPsaDataProvider(HttpClient http, HaloAuthClient auth, IOptions<HaloOptions> haloOptions, ILogger<HaloPsaDataProvider> logger)
     {
         _http = http;
         _auth = auth;
+        _haloOptions = haloOptions.Value;
         _logger = logger;
     }
 
@@ -33,6 +39,7 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
             response = await SendTicketsRequestAsync(token, cancellationToken).ConfigureAwait(false);
         }
 
+        IReadOnlyList<HaloTicket> tickets;
         using (response)
         {
             response.EnsureSuccessStatusCode();
@@ -47,8 +54,11 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
                     body.RecordCount, body.Tickets.Count);
             }
 
-            return MapSnapshot(body.Tickets);
+            tickets = body.Tickets;
         }
+
+        var organizationName = await GetOrganizationNameAsync(token, cancellationToken).ConfigureAwait(false);
+        return MapSnapshot(tickets) with { OrganizationName = organizationName };
     }
 
     private async Task<HttpResponseMessage> SendTicketsRequestAsync(string token, CancellationToken cancellationToken)
@@ -57,6 +67,41 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
             "api/Tickets?open_only=true&includeslatimer=true&pageinate=false&count=200");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Fetches the Halo organisation's <c>portal_title</c> for use as the dashboard header, once,
+    /// on the first call — the result (success or failure) is cached for the process lifetime, so
+    /// later polls never re-fetch it. Reuses whatever access token the caller already has (does
+    /// not itself retry on 401 — <see cref="GetSnapshotAsync"/> has already resolved a valid token
+    /// by the time this runs).
+    /// </summary>
+    private async Task<string?> GetOrganizationNameAsync(string token, CancellationToken cancellationToken)
+    {
+        if (_organizationNameFetched)
+        {
+            return _organizationName;
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get,
+            $"api/Organisation/{_haloOptions.OrganisationId}?includedetails=true");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response.IsSuccessStatusCode)
+        {
+            var organisation = await response.Content.ReadFromJsonAsync<HaloOrganisationResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
+            _organizationName = string.IsNullOrWhiteSpace(organisation?.PortalTitle) ? null : organisation.PortalTitle;
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Failed to fetch Halo organisation {OrganisationId} details ({StatusCode}); the dashboard will use the configured header text instead.",
+                _haloOptions.OrganisationId, response.StatusCode);
+        }
+
+        _organizationNameFetched = true;
+        return _organizationName;
     }
 
     /// <summary>

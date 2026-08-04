@@ -18,8 +18,9 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
 | `Psa:Halo:BaseUrl` | — | Your Halo tenant's API base URL. |
 | `Psa:Halo:ClientId` / `ClientSecret` | — | OAuth2 client-credentials — secrets, set via env/user-secrets. |
 | `Psa:Halo:Scope` | `read:tickets` | OAuth2 scope requested. **Set this to the minimum your Halo API client is actually granted** — see Least Privilege below. |
+| `Psa:Halo:OrganisationId` | `1` | Halo Organisation whose `portal_title` is used as the dashboard header (fetched once at startup, cached for the process lifetime). Falls back to `Dashboard:HeaderText` if the fetch fails or the org has no portal title set. |
 | `BusyBar:Address` | `10.0.4.20` | Network address of the BUSY Bar device. |
-| `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the NORMAL-mode display. |
+| `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the NORMAL-mode display, used only when the Halo organisation lookup (`Psa:Halo:OrganisationId`) doesn't produce a header. |
 
 ## Least privilege
 

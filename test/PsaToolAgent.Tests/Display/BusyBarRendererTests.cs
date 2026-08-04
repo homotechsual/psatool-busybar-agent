@@ -23,11 +23,23 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new NormalDashboardState { Rank1Count = 2, Rank2Count = 5, UnassignedCount = 0 };
 
-        await renderer.RenderAsync(state, CancellationToken.None);
+        await renderer.RenderAsync(state, organizationName: null, CancellationToken.None);
 
         Assert.Contains("\"text\":\"WRC SERVICE DESK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"P1:2 P2:5\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"SLA: OK\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task RenderAsync_Normal_UsesOrganizationName_WhenProvided()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new NormalDashboardState { Rank1Count = 2, Rank2Count = 5, UnassignedCount = 0 };
+
+        await renderer.RenderAsync(state, organizationName: "Acme Service Desk", CancellationToken.None);
+
+        Assert.Contains("\"text\":\"Acme Service Desk\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"WRC SERVICE DESK\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -36,7 +48,7 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new NormalDashboardState { Rank1Count = 0, Rank2Count = 0, UnassignedCount = 4 };
 
-        await renderer.RenderAsync(state, CancellationToken.None);
+        await renderer.RenderAsync(state, organizationName: null, CancellationToken.None);
 
         Assert.Contains("\"text\":\"UNASSIGN:4\"", handler.LastRequestBody);
     }
@@ -47,7 +59,7 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new SlaWarningDashboardState { TicketId = "101", MinutesRemaining = 12 };
 
-        await renderer.RenderAsync(state, CancellationToken.None);
+        await renderer.RenderAsync(state, organizationName: null, CancellationToken.None);
 
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
@@ -60,7 +72,7 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new SlaWarningDashboardState { TicketId = "101", MinutesRemaining = -30 };
 
-        await renderer.RenderAsync(state, CancellationToken.None);
+        await renderer.RenderAsync(state, organizationName: null, CancellationToken.None);
 
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
@@ -74,7 +86,7 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 3 };
 
-        await renderer.RenderAsync(state, CancellationToken.None);
+        await renderer.RenderAsync(state, organizationName: null, CancellationToken.None);
 
         Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);

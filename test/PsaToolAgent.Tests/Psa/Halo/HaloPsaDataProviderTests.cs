@@ -79,17 +79,31 @@ public class HaloPsaDataProviderTests
     {
         var handler = new FakeHttpMessageHandler
         {
-            Respond = request => request.RequestUri!.AbsolutePath.Contains("auth/token")
-                ? new HttpResponseMessage(HttpStatusCode.OK)
+            Respond = request =>
+            {
+                if (request.RequestUri!.AbsolutePath.Contains("auth/token"))
                 {
-                    Content = new StringContent("{\"access_token\":\"abc123\",\"expires_in\":3600}", Encoding.UTF8, "application/json")
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"access_token\":\"abc123\",\"expires_in\":3600}", Encoding.UTF8, "application/json")
+                    };
                 }
-                : new HttpResponseMessage(HttpStatusCode.OK)
+
+                if (request.RequestUri!.AbsolutePath.Contains("Organisation"))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"portal_title\":null}", Encoding.UTF8, "application/json")
+                    };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
                         "{\"record_count\":1,\"tickets\":[{\"id\":1,\"summary\":\"Test\",\"priority_id\":1,\"agent_id\":3,\"client_name\":\"Acme\",\"is_vip\":false,\"slatimeleft\":null,\"onhold\":false}]}",
                         Encoding.UTF8, "application/json")
-                }
+                };
+            }
         };
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.halopsa.com/") };
         var haloOptions = Options.Create(new HaloOptions
@@ -99,13 +113,106 @@ public class HaloPsaDataProviderTests
             ClientSecret = "test-secret"
         });
         var authClient = new HaloAuthClient(http, haloOptions);
-        var provider = new HaloPsaDataProvider(http, authClient, NullLogger<HaloPsaDataProvider>.Instance);
+        var provider = new HaloPsaDataProvider(http, authClient, haloOptions, NullLogger<HaloPsaDataProvider>.Instance);
 
         var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
 
         Assert.Equal(1, snapshot.OpenTicketCount);
         Assert.Equal(1, snapshot.PriorityCounts[1]);
         Assert.Contains(handler.Requests, r => r.Headers.Authorization?.Parameter == "abc123");
+    }
+
+    [Fact]
+    public async Task GetSnapshotAsync_FetchesOrganizationName_OnceAndCachesIt()
+    {
+        var organisationCallCount = 0;
+        var handler = new FakeHttpMessageHandler
+        {
+            Respond = request =>
+            {
+                if (request.RequestUri!.AbsolutePath.Contains("auth/token"))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"access_token\":\"abc123\",\"expires_in\":3600}", Encoding.UTF8, "application/json")
+                    };
+                }
+
+                if (request.RequestUri!.AbsolutePath.Contains("Organisation"))
+                {
+                    organisationCallCount++;
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"portal_title\":\"Acme Service Desk\"}", Encoding.UTF8, "application/json")
+                    };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"record_count\":0,\"tickets\":[]}", Encoding.UTF8, "application/json")
+                };
+            }
+        };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.halopsa.com/") };
+        var haloOptions = Options.Create(new HaloOptions
+        {
+            BaseUrl = "https://example.halopsa.com/",
+            ClientId = "test-client",
+            ClientSecret = "test-secret",
+            OrganisationId = 1
+        });
+        var authClient = new HaloAuthClient(http, haloOptions);
+        var provider = new HaloPsaDataProvider(http, authClient, haloOptions, NullLogger<HaloPsaDataProvider>.Instance);
+
+        var first = await provider.GetSnapshotAsync(CancellationToken.None);
+        var second = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.Equal("Acme Service Desk", first.OrganizationName);
+        Assert.Equal("Acme Service Desk", second.OrganizationName);
+        Assert.Equal(1, organisationCallCount);
+        Assert.Contains(handler.Requests, r => r.RequestUri!.AbsolutePath.Contains("Organisation/1"));
+    }
+
+    [Fact]
+    public async Task GetSnapshotAsync_LeavesOrganizationNameNull_WhenOrganisationFetchFails()
+    {
+        var handler = new FakeHttpMessageHandler
+        {
+            Respond = request =>
+            {
+                if (request.RequestUri!.AbsolutePath.Contains("auth/token"))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"access_token\":\"abc123\",\"expires_in\":3600}", Encoding.UTF8, "application/json")
+                    };
+                }
+
+                if (request.RequestUri!.AbsolutePath.Contains("Organisation"))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"record_count\":0,\"tickets\":[]}", Encoding.UTF8, "application/json")
+                };
+            }
+        };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.halopsa.com/") };
+        var haloOptions = Options.Create(new HaloOptions
+        {
+            BaseUrl = "https://example.halopsa.com/",
+            ClientId = "test-client",
+            ClientSecret = "test-secret"
+        });
+        var authClient = new HaloAuthClient(http, haloOptions);
+        var provider = new HaloPsaDataProvider(http, authClient, haloOptions, NullLogger<HaloPsaDataProvider>.Instance);
+
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.Null(snapshot.OrganizationName);
+        Assert.Equal(0, snapshot.OpenTicketCount);
     }
 
     [Fact]
@@ -123,6 +230,14 @@ public class HaloPsaDataProviderTests
                     return new HttpResponseMessage(HttpStatusCode.OK)
                     {
                         Content = new StringContent($"{{\"access_token\":\"token{authCallCount}\",\"expires_in\":3600}}", Encoding.UTF8, "application/json")
+                    };
+                }
+
+                if (request.RequestUri!.AbsolutePath.Contains("Organisation"))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"portal_title\":null}", Encoding.UTF8, "application/json")
                     };
                 }
 
@@ -148,7 +263,7 @@ public class HaloPsaDataProviderTests
             ClientSecret = "test-secret"
         });
         var authClient = new HaloAuthClient(http, haloOptions);
-        var provider = new HaloPsaDataProvider(http, authClient, NullLogger<HaloPsaDataProvider>.Instance);
+        var provider = new HaloPsaDataProvider(http, authClient, haloOptions, NullLogger<HaloPsaDataProvider>.Instance);
 
         var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
 

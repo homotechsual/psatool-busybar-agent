@@ -16,10 +16,14 @@ public sealed class BusyBarRenderer
         _options = options.Value;
     }
 
-    public Task RenderAsync(DashboardState state, CancellationToken cancellationToken)
+    /// <param name="organizationName">The PSA's display-ready organization name (e.g. Halo's
+    /// <c>portal_title</c>), if the provider supplied one via <see cref="PsaToolAgent.Psa.PsaSnapshot.OrganizationName"/>.
+    /// Used as the NORMAL-mode header instead of the configured <see cref="DashboardOptions.HeaderText"/>
+    /// when present; ignored by every other <see cref="DashboardState"/>.</param>
+    public Task RenderAsync(DashboardState state, string? organizationName, CancellationToken cancellationToken)
         => state switch
         {
-            NormalDashboardState normal => RenderNormalAsync(normal, cancellationToken),
+            NormalDashboardState normal => RenderNormalAsync(normal, organizationName, cancellationToken),
             SlaWarningDashboardState slaWarning => RenderSlaWarningAsync(slaWarning, cancellationToken),
             CriticalDashboardState critical => RenderCriticalAsync(critical, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(state))
@@ -31,10 +35,11 @@ public sealed class BusyBarRenderer
     public Task ClearAsync(CancellationToken cancellationToken)
         => _bar.DisplayClearAsync(new Busy.Bar.DisplayClearParams(ApplicationName), cancellationToken: cancellationToken);
 
-    private Task RenderNormalAsync(NormalDashboardState state, CancellationToken cancellationToken)
+    private Task RenderNormalAsync(NormalDashboardState state, string? organizationName, CancellationToken cancellationToken)
     {
+        var headerText = string.IsNullOrWhiteSpace(organizationName) ? _options.HeaderText : organizationName;
         var thirdLine = state.UnassignedCount > 0 ? $"UNASSIGN:{state.UnassignedCount}" : "SLA: OK";
-        return DrawAsync(new[] { _options.HeaderText, $"P1:{state.Rank1Count} P2:{state.Rank2Count}", thirdLine }, cancellationToken);
+        return DrawAsync(new[] { headerText, $"P1:{state.Rank1Count} P2:{state.Rank2Count}", thirdLine }, cancellationToken);
     }
 
     private Task RenderSlaWarningAsync(SlaWarningDashboardState state, CancellationToken cancellationToken)

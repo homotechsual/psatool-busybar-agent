@@ -20,4 +20,10 @@ public sealed class HaloOptions
     /// this at a broad/admin default.</summary>
     [Required]
     public string Scope { get; init; } = "read:tickets";
+
+    /// <summary>The Halo Organisation ID whose <c>portal_title</c> is used as the dashboard header
+    /// (falls back to <c>Dashboard:HeaderText</c> if the fetch fails). Fetched once at startup and
+    /// cached for the process lifetime.</summary>
+    [Range(1, int.MaxValue)]
+    public int OrganisationId { get; init; } = 1;
 }

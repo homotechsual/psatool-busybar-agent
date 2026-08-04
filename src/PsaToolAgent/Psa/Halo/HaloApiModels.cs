@@ -15,3 +15,6 @@ internal sealed record HaloTicket(
     [property: JsonPropertyName("is_vip")] bool IsVip,
     [property: JsonPropertyName("slatimeleft")] double? SlaTimeLeftHours,
     [property: JsonPropertyName("onhold")] bool OnHold);
+
+internal sealed record HaloOrganisationResponse(
+    [property: JsonPropertyName("portal_title")] string? PortalTitle);

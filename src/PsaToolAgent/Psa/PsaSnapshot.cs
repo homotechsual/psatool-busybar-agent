@@ -26,6 +26,13 @@ public sealed record PsaSnapshot
     public required IReadOnlyList<SlaRiskTicket> SlaRiskTickets { get; init; }
     public required int UnassignedTicketCount { get; init; }
     public required IReadOnlyList<VipTicket> VipTickets { get; init; }
+
+    /// <summary>
+    /// The PSA's display-ready organization/portal name, if the provider can supply one (e.g.
+    /// Halo's <c>portal_title</c>). Null when the provider has no such concept, or couldn't fetch
+    /// one — the display layer falls back to the configured <c>Dashboard:HeaderText</c> in that case.
+    /// </summary>
+    public string? OrganizationName { get; init; }
 }
 
 /// <param name="TicketId">Provider-specific ticket identifier, as a display-ready string.</param>

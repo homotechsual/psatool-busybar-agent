@@ -68,7 +68,7 @@ public sealed class PollingBackgroundService : BackgroundService
         {
             var snapshot = await _provider.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
             var state = PriorityEngine.Evaluate(snapshot, _options.Value.SlaRiskThresholdMinutes);
-            await _renderer.RenderAsync(state, cancellationToken).ConfigureAwait(false);
+            await _renderer.RenderAsync(state, snapshot.OrganizationName, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Dashboard updated: {StateType}", state.GetType().Name);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
