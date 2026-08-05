@@ -1,0 +1,137 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  deployments: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: ${{
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+      }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          fetch-depth: 0
+
+      - name: Remove built-in Yarn
+        run: npm uninstall -g yarn
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 'current'
+          cache: 'yarn'
+          cache-dependency-path: website/yarn.lock
+
+      - name: Install website dependencies
+        working-directory: website
+        run: yarn install --immutable
+
+      - name: Build docs site
+        working-directory: website
+        run: yarn build
+
+      # actions/checkout leaves the repo in a detached HEAD, so wrangler can't infer the
+      # branch from git state, without --branch it falls back to the commit SHA, which
+      # Cloudflare Pages treats as a non-production deploy even on pushes to main.
+      - name: Publish to Cloudflare Pages
+        id: cloudflare-pages-deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: 'pages deploy website/build --project-name=psatool-busybar-agent --branch=${{ github.event.pull_request.head.ref || github.ref_name }}'
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve deployment URLs
+        id: deployment-urls
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.cloudflare-pages-deploy.outputs.deployment-url }}
+          ALIAS_URL: ${{ steps.cloudflare-pages-deploy.outputs.pages-deployment-alias-url }}
+        run: |
+          preview_url="$ALIAS_URL"
+          if [ -z "$preview_url" ] || [ "$preview_url" = "undefined" ]; then
+            preview_url="$DEPLOYMENT_URL"
+          fi
+          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Write deployment summary
+        shell: bash
+        env:
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ENVIRONMENT: ${{ steps.cloudflare-pages-deploy.outputs.pages-environment }}
+          DEPLOYMENT_URL: ${{ steps.deployment-urls.outputs.deployment_url }}
+          PREVIEW_URL: ${{ steps.deployment-urls.outputs.preview_url }}
+        run: |
+          {
+            echo "## Deploying with Cloudflare Pages"
+            echo
+            echo "| Name | Result |"
+            echo "| --- | --- |"
+            echo "| Last commit | \`$COMMIT_SHA\` |"
+            echo "| Deploy log | [View run]($RUN_URL) |"
+            if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "| Deployment URL | [$DEPLOYMENT_URL]($DEPLOYMENT_URL) |"
+            else
+              echo "| Preview URL | [$PREVIEW_URL]($PREVIEW_URL) |"
+              echo "| Deployment URL | [$DEPLOYMENT_URL]($DEPLOYMENT_URL) |"
+            fi
+            echo "| Environment | $ENVIRONMENT |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create commit comment
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: peter-evans/commit-comment@v4
+        with:
+          body: |
+            ### Successfully deployed to Cloudflare Pages!
+
+            | Item | Value |
+            | --- | --- |
+            | **Latest commit** | ${{ github.event.pull_request.head.sha || github.sha }} |
+            | **Deploy log** | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
+            | **Deployment URL** | [${{ steps.cloudflare-pages-deploy.outputs.deployment-url }}](${{ steps.cloudflare-pages-deploy.outputs.deployment-url }}) |
+            | **Environment** | ${{ steps.cloudflare-pages-deploy.outputs.pages-environment }} |
+
+      - name: Create PR comment
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: mshick/add-pr-comment@v3
+        with:
+          message: |
+            ### Successfully deployed to Cloudflare Pages!
+
+            | Item | Value |
+            | --- | --- |
+            | **Latest commit** | ${{ github.event.pull_request.head.sha || github.sha }} |
+            | **Deploy log** | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
+            | **Preview URL** | [${{ steps.cloudflare-pages-deploy.outputs.pages-deployment-alias-url || steps.cloudflare-pages-deploy.outputs.deployment-url }}](${{ steps.cloudflare-pages-deploy.outputs.pages-deployment-alias-url || steps.cloudflare-pages-deploy.outputs.deployment-url }}) |
+            | **Environment** | ${{ steps.cloudflare-pages-deploy.outputs.pages-environment }} |
