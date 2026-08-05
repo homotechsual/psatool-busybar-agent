@@ -1,0 +1,70 @@
+---
+sidebar_position: 3
+---
+
+# Architecture
+
+```
+IPsaDataProvider.GetSnapshotAsync()
+  -> PsaSnapshot
+  -> PriorityEngine.Evaluate()
+  -> DashboardState
+  -> BusyBarRenderer.RenderAsync()
+```
+
+## Components
+
+### IPsaDataProvider
+
+The pluggable provider seam. One method, `GetSnapshotAsync`, returning a `PsaSnapshot`.
+Implementations are registered in dependency injection, and the `Psa:Provider` configuration
+setting selects which one runs at startup. See [Adding a PSA provider](/architecture) for how to
+implement one.
+
+### HaloPsaDataProvider
+
+The built in provider. Authenticates to Halo's REST API through OAuth2 client credentials,
+exchanging a client ID and secret for a bearer token that it refreshes as needed, then queries
+Halo for the ticket data a `PsaSnapshot` needs.
+
+### PsaSnapshot
+
+The provider agnostic data contract: open ticket count, priority counts, SLA risk tickets,
+unassigned ticket count, and VIP customer tickets. See [Adding a PSA provider](/architecture) for
+what each field means to a new implementation.
+
+### PriorityEngine
+
+A pure function, `PsaSnapshot` in, `DashboardState` out. No I/O, no PSA or BUSY Bar dependency. It
+evaluates a five level priority order, top to bottom, first match wins:
+
+1. Rank 1 tickets present: critical mode.
+2. SLA risk tickets present (breaching within the configured threshold): SLA warning mode.
+3. VIP customer tickets present: critical mode, VIP variant.
+4. Unassigned tickets present: normal mode with an unassigned count callout.
+5. Otherwise: normal mode, standard dashboard.
+
+### DashboardState
+
+Which display mode is active, plus the specific values to render: counts, priority names when the
+provider supplies them, and SLA timing.
+
+### BusyBarRenderer
+
+Turns a `DashboardState` into `DisplayDrawAsync` calls against the BUSY Bar, one method per
+display mode. For critical mode it can render several pages (whichever condition triggered it,
+then a rank 2 tier, then a rank 3 tier, then SLA risk tickets if any), picking the requested page
+through its `cyclePage` parameter. See `PollingBackgroundService` below for how those pages get
+shown in turn.
+
+### PollingBackgroundService
+
+A .NET `BackgroundService` driving the poll loop on `Psa:PollIntervalSeconds`. A failed poll (Halo
+unreachable, authentication failure, BUSY Bar unreachable) is logged, and the service tries again
+on the next interval rather than crashing the worker. When a poll produces critical mode with more
+than one page to show, the service cycles through those pages every
+`Dashboard:DisplayCycleSeconds` seconds for the rest of that poll interval, so every tier gets
+screen time rather than only whichever one triggered the alert. Normal and SLA warning mode have
+only one page each, so they are drawn once and left until the next poll. On shutdown, the service
+clears the display so a container restart or deploy does not leave stale dashboard state on
+screen.

@@ -12,6 +12,8 @@ helpdesk priority, and renders the result to a physical BUSY Bar over the networ
 IPsaDataProvider -> PsaSnapshot -> PriorityEngine -> DashboardState -> BusyBarRenderer
 ```
 
+Read [Architecture](/architecture) for what each of those pieces does.
+
 ## Quick start
 
 ```bash
@@ -29,3 +31,4 @@ docker compose up -d --build
 ## Next
 
 - [Configuration](/configuration): every setting, what it defaults to, and what it does.
+- [Architecture](/architecture): the poll, evaluate, render pipeline and its five level priority order.

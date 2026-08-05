@@ -80,6 +80,7 @@ const config: Config = {
           items: [
             {label: 'Getting Started', to: '/'},
             {label: 'Configuration', to: '/configuration'},
+            {label: 'Architecture', to: '/architecture'},
           ],
         },
         {
