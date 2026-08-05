@@ -14,7 +14,13 @@ internal sealed record HaloTicket(
     [property: JsonPropertyName("client_name")] string ClientName,
     [property: JsonPropertyName("is_vip")] bool IsVip,
     [property: JsonPropertyName("slatimeleft")] double? SlaTimeLeftHours,
-    [property: JsonPropertyName("onhold")] bool OnHold);
+    [property: JsonPropertyName("onhold")] bool OnHold,
+    [property: JsonPropertyName("priority")] HaloTicketPriority? Priority = null);
+
+/// <summary>Only present when the tickets query is made with <c>includedetails=true</c>.</summary>
+internal sealed record HaloTicketPriority(
+    [property: JsonPropertyName("priorityid")] int PriorityId,
+    [property: JsonPropertyName("name")] string Name);
 
 internal sealed record HaloOrganisationResponse(
     [property: JsonPropertyName("portal_title")] string? PortalTitle);

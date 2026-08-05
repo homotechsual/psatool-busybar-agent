@@ -28,6 +28,26 @@ public class HaloPsaDataProviderTests
     }
 
     [Fact]
+    public void MapSnapshot_ExtractsRealPriorityNames_FromTheTicketsOwnPriorityObject()
+    {
+        var tickets = new[]
+        {
+            new HaloTicket(1, "Ticket A", PriorityId: 1, AgentId: 3, ClientName: "Acme", IsVip: false, SlaTimeLeftHours: null, OnHold: false,
+                Priority: new HaloTicketPriority(PriorityId: 1, Name: "Critical")),
+            new HaloTicket(2, "Ticket B", PriorityId: 2, AgentId: 3, ClientName: "Acme", IsVip: false, SlaTimeLeftHours: null, OnHold: false,
+                Priority: new HaloTicketPriority(PriorityId: 2, Name: "Urgent")),
+            new HaloTicket(3, "Ticket C", PriorityId: 3, AgentId: 3, ClientName: "Acme", IsVip: false, SlaTimeLeftHours: null, OnHold: false,
+                Priority: null)
+        };
+
+        var snapshot = HaloPsaDataProvider.MapSnapshot(tickets);
+
+        Assert.Equal("Critical", snapshot.PriorityNames![1]);
+        Assert.Equal("Urgent", snapshot.PriorityNames![2]);
+        Assert.False(snapshot.PriorityNames!.ContainsKey(3));
+    }
+
+    [Fact]
     public void MapSnapshot_ExcludesOnHoldTickets_FromAllCounts()
     {
         var tickets = new[]

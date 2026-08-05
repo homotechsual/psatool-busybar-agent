@@ -24,19 +24,25 @@ public sealed record SlaWarningDashboardState : DashboardState
     public int BreachedCount { get; init; }
 }
 
-/// <summary>Covers both the "rank-1 tickets open" and "VIP tickets open" cases — <see cref="Reason"/>
-/// distinguishes which triggered it (e.g. "P1 OPEN" or "VIP OPEN"). Also carries the rank-2/rank-3
-/// counts, and — since P1 always outranks SLA risk in the precedence order, which would otherwise
-/// hide breaching tickets entirely — a summary of any SLA-risk tickets too (count plus the worst
-/// one's remaining time), if any exist alongside whatever triggered CRITICAL. All independent of
-/// the trigger condition, so the display can cycle through everything relevant rather than showing
-/// only the one thing that fired.</summary>
+/// <summary>Covers both the "rank-1 tickets open" and "VIP tickets open" cases. <see cref="Reason"/>
+/// is the trigger's display label — the tenant's real priority name (e.g. "CRITICAL") when
+/// triggered by rank 1, or "VIP" when triggered by a VIP ticket; <see cref="IsVipTriggered"/> lets
+/// the display give VIP its own distinct color rather than sharing rank 1's severity styling, since
+/// VIP is a different kind of signal, not literally a priority tier. Also carries the rank-2/rank-3
+/// counts (with their own real names, when known), and — since P1 always outranks SLA risk in the
+/// precedence order, which would otherwise hide breaching tickets entirely — a summary of any
+/// SLA-risk tickets too (count plus the worst one's remaining time), if any exist alongside
+/// whatever triggered CRITICAL. All independent of the trigger condition, so the display can cycle
+/// through everything relevant rather than showing only the one thing that fired.</summary>
 public sealed record CriticalDashboardState : DashboardState
 {
     public required string Reason { get; init; }
     public required int Count { get; init; }
+    public bool IsVipTriggered { get; init; }
     public int Rank2Count { get; init; }
+    public string? Rank2Name { get; init; }
     public int Rank3Count { get; init; }
+    public string? Rank3Name { get; init; }
     public int SlaRiskCount { get; init; }
     public int? SlaRiskWorstMinutesRemaining { get; init; }
     public int SlaRiskBreachedCount { get; init; }

@@ -117,8 +117,9 @@ public class PollingBackgroundServiceTests
         await service.PollOnceAsync(CancellationToken.None);
 
         Assert.True(handler.RequestBodies.Count >= 3, $"Expected at least 3 draw calls over the ~3s poll interval at a 1s cycle, got {handler.RequestBodies.Count}");
-        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P1 OPEN\""));
-        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P2 OPEN\""));
-        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P3 OPEN\""));
+        // The stub snapshot supplies no PriorityNames, so each page falls back to its generic P1/P2/P3 label.
+        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P1\""));
+        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P2\""));
+        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P3\""));
     }
 }

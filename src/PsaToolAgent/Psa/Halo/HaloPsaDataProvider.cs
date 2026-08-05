@@ -63,8 +63,11 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
 
     private async Task<HttpResponseMessage> SendTicketsRequestAsync(string token, CancellationToken cancellationToken)
     {
+        // includedetails=true is what puts the nested "priority" object (with the tenant's real
+        // priority name, e.g. "Critical") on each ticket — without it only the bare priority_id
+        // comes back, and the display would have to fall back to a generic "P1"/"P2"/"P3" label.
         using var request = new HttpRequestMessage(HttpMethod.Get,
-            "api/Tickets?open_only=true&includeslatimer=true&pageinate=false&count=200");
+            "api/Tickets?open_only=true&includeslatimer=true&pageinate=false&count=200&includedetails=true");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
@@ -122,6 +125,14 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
             .GroupBy(t => t.PriorityId)
             .ToDictionary(g => g.Key, g => g.Count());
 
+        // Every ticket of a given priority_id carries the same tenant-defined name, so any one
+        // of them is enough to resolve that rank's display name — a rank with zero open tickets
+        // simply has no name here, which is fine, since the display never needs one for an empty tier.
+        var priorityNames = activeTickets
+            .Where(t => t.Priority is not null)
+            .GroupBy(t => t.PriorityId)
+            .ToDictionary(g => g.Key, g => g.First().Priority!.Name);
+
         var slaRiskTickets = activeTickets
             .Where(t => t.SlaTimeLeftHours is not null)
             .Select(t => new SlaRiskTicket(t.Id.ToString(), (int)(t.SlaTimeLeftHours!.Value * 60)))
@@ -140,6 +151,7 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
         {
             OpenTicketCount = activeTickets.Count,
             PriorityCounts = priorityCounts,
+            PriorityNames = priorityNames,
             SlaRiskTickets = slaRiskTickets,
             UnassignedTicketCount = unassignedCount,
             VipTickets = vipTickets

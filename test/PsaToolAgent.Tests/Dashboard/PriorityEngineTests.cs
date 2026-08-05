@@ -34,23 +34,42 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
-        Assert.Equal("P1 OPEN", critical.Reason);
+        Assert.Equal("P1", critical.Reason);
         Assert.Equal(3, critical.Count);
+        Assert.False(critical.IsVipTriggered);
     }
 
     [Fact]
-    public void Evaluate_Critical_CarriesRank2AndRank3Counts_ForDisplayCycling()
+    public void Evaluate_Critical_UsesRealPriorityName_WhenProviderSuppliesOne()
     {
         var snapshot = EmptySnapshot() with
         {
-            PriorityCounts = new Dictionary<int, int> { [1] = 3, [2] = 7, [3] = 2 }
+            PriorityCounts = new Dictionary<int, int> { [1] = 3 },
+            PriorityNames = new Dictionary<int, string> { [1] = "Critical" }
+        };
+
+        var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
+
+        var critical = Assert.IsType<CriticalDashboardState>(state);
+        Assert.Equal("CRITICAL", critical.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_Critical_CarriesRank2AndRank3CountsAndNames_ForDisplayCycling()
+    {
+        var snapshot = EmptySnapshot() with
+        {
+            PriorityCounts = new Dictionary<int, int> { [1] = 3, [2] = 7, [3] = 2 },
+            PriorityNames = new Dictionary<int, string> { [2] = "Urgent", [3] = "High" }
         };
 
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
         Assert.Equal(7, critical.Rank2Count);
+        Assert.Equal("Urgent", critical.Rank2Name);
         Assert.Equal(2, critical.Rank3Count);
+        Assert.Equal("High", critical.Rank3Name);
     }
 
     [Fact]
@@ -122,7 +141,8 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
-        Assert.Equal("VIP OPEN", critical.Reason);
+        Assert.Equal("VIP", critical.Reason);
+        Assert.True(critical.IsVipTriggered);
         Assert.Equal(1, critical.Count);
         Assert.Equal(4, critical.Rank2Count);
     }
@@ -153,7 +173,7 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
-        Assert.Equal("P1 OPEN", critical.Reason);
+        Assert.Equal("P1", critical.Reason);
     }
 
     [Fact]
@@ -171,7 +191,7 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
-        Assert.Equal("P1 OPEN", critical.Reason);
+        Assert.Equal("P1", critical.Reason);
         Assert.Equal(2, critical.SlaRiskCount);
         Assert.Equal(5, critical.SlaRiskWorstMinutesRemaining);
     }

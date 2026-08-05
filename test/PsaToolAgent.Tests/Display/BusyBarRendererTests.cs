@@ -83,43 +83,54 @@ public class BusyBarRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_Critical_Page0_ShowsReasonAndCount()
+    public async Task RenderAsync_Critical_Page0_ShowsTriggerNameAndCount()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 3, Rank2Count = 7, Rank3Count = 9 };
+        var state = new CriticalDashboardState { Reason = "CRITICAL", Count = 3, Rank2Count = 7, Rank3Count = 9 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
         Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 3\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FF0000FF\"", handler.LastRequestBody);
     }
 
     [Fact]
-    public async Task RenderAsync_Critical_Page1_ShowsP2Count()
+    public async Task RenderAsync_Critical_Page1_ShowsRealP2NameAndCount()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 3, Rank2Count = 7, Rank3Count = 9 };
+        var state = new CriticalDashboardState { Reason = "CRITICAL", Count = 3, Rank2Count = 7, Rank2Name = "Urgent", Rank3Count = 9 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"P2 OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"URGENT\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 7\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
 
     [Fact]
-    public async Task RenderAsync_Critical_Page2_ShowsP3Count()
+    public async Task RenderAsync_Critical_Page1_FallsBackToGenericP2Label_WhenNoRealNameSupplied()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 3, Rank2Count = 7, Rank3Count = 9 };
+        var state = new CriticalDashboardState { Reason = "CRITICAL", Count = 3, Rank2Count = 7, Rank2Name = null, Rank3Count = 9 };
+
+        await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
+
+        Assert.Contains("\"text\":\"P2\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task RenderAsync_Critical_Page2_ShowsRealP3NameAndCount()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new CriticalDashboardState { Reason = "CRITICAL", Count = 3, Rank2Count = 7, Rank3Count = 9, Rank3Name = "High" };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 2, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"P3 OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"HIGH\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 9\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFFF00FF\"", handler.LastRequestBody);
     }
@@ -128,40 +139,52 @@ public class BusyBarRendererTests
     public async Task RenderAsync_Critical_SkipsEmptyTiers_StayingOnPage0Regardless()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 3, Rank2Count = 0, Rank3Count = 0 };
+        var state = new CriticalDashboardState { Reason = "P1", Count = 3, Rank2Count = 0, Rank3Count = 0 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 5, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"P1\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 3\"", handler.LastRequestBody);
-        Assert.DoesNotContain("\"text\":\"P2 OPEN\"", handler.LastRequestBody);
-        Assert.DoesNotContain("\"text\":\"P3 OPEN\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"P2\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"P3\"", handler.LastRequestBody);
     }
 
     [Fact]
     public async Task RenderAsync_Critical_SkipsP3_WhenOnlyP2HasTickets()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 3, Rank2Count = 4, Rank3Count = 0 };
+        var state = new CriticalDashboardState { Reason = "P1", Count = 3, Rank2Count = 4, Rank3Count = 0 };
 
         // 2 pages exist (trigger, P2) — page 2 should wrap back to page 0, never show P3.
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 2, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"P1\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 3\"", handler.LastRequestBody);
-        Assert.DoesNotContain("\"text\":\"P3 OPEN\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"P3\"", handler.LastRequestBody);
     }
 
     [Fact]
     public async Task RenderAsync_Critical_Page3_WrapsBackToPage0()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "VIP OPEN", Count = 1, Rank2Count = 7, Rank3Count = 9 };
+        var state = new CriticalDashboardState { Reason = "VIP", Count = 1, IsVipTriggered = true, Rank2Count = 7, Rank3Count = 9 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 3, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"VIP OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"VIP\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 1\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task RenderAsync_Critical_VipTrigger_UsesDistinctColor_NotSharedWithRank1()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new CriticalDashboardState { Reason = "VIP", Count = 1, IsVipTriggered = true };
+
+        await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
+
+        Assert.Contains("\"color\":\"#FF00FFFF\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"color\":\"#FF0000FF\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -170,7 +193,7 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new CriticalDashboardState
         {
-            Reason = "P1 OPEN",
+            Reason = "CRITICAL",
             Count = 1,
             Rank2Count = 0,
             Rank3Count = 0,
@@ -194,7 +217,7 @@ public class BusyBarRendererTests
         var (renderer, handler) = CreateRenderer();
         var state = new CriticalDashboardState
         {
-            Reason = "P1 OPEN",
+            Reason = "CRITICAL",
             Count = 1,
             SlaRiskCount = 2,
             SlaRiskWorstMinutesRemaining = -15,
@@ -211,12 +234,12 @@ public class BusyBarRendererTests
     public async Task RenderAsync_Critical_SkipsSlaRiskPage_WhenNoBreachingTicket()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 1, SlaRiskCount = 0 };
+        var state = new CriticalDashboardState { Reason = "P1", Count = 1, SlaRiskCount = 0 };
 
         // With no other tiers and no SLA-risk ticket, only 1 page exists — any cyclePage stays on it.
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 4, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"P1\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"SLA RISK\"", handler.LastRequestBody);
     }
 }

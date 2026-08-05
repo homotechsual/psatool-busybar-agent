@@ -17,6 +17,15 @@ public sealed record PsaSnapshot
     public required IReadOnlyDictionary<int, int> PriorityCounts { get; init; }
 
     /// <summary>
+    /// Optional display-ready name per priority rank (e.g. Halo's own "Critical"/"Urgent"/"High"
+    /// tier names), if the provider can supply one — purely a display enrichment, separate from
+    /// <see cref="PriorityCounts"/>'s provider-agnostic rank keys. A rank missing from this
+    /// dictionary (or the whole dictionary being null) means the display falls back to a generic
+    /// "P{rank}" label; a provider that has no such concept should simply leave this null.
+    /// </summary>
+    public IReadOnlyDictionary<int, string>? PriorityNames { get; init; }
+
+    /// <summary>
     /// Every ticket that has a known SLA timer, unfiltered by any risk threshold — including
     /// tickets with days left and already-breached tickets (negative <see cref="SlaRiskTicket.MinutesRemaining"/>).
     /// A provider populating this must NOT pre-filter by threshold: <c>PriorityEngine</c> is the

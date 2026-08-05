@@ -10,12 +10,15 @@ public sealed class BusyBarRenderer
     // #RRGGBBAA, matching TextElement.Color's format. A traffic-light scheme so urgency is
     // visible at a glance without reading the text: white/neutral when calm, amber for an
     // SLA-risk warning. Within CRITICAL, each cycled page is colored by its own severity —
-    // red for the trigger (P1/VIP), stepping down through orange (P2) and yellow (P3).
+    // red for a rank-1 trigger, stepping down through orange (P2) and yellow (P3). VIP is its
+    // own distinct category (not a priority tier), so it gets its own color rather than sharing
+    // rank 1's red.
     private const string NormalColor = "#FFFFFFFF";
     private const string SlaWarningColor = "#FFA500FF";
     private const string CriticalTriggerColor = "#FF0000FF";
     private const string CriticalP2Color = "#FFA500FF";
     private const string CriticalP3Color = "#FFFF00FF";
+    private const string VipColor = "#FF00FFFF";
 
     private readonly Busy.Bar.BusyBar _bar;
     private readonly DashboardOptions _options;
@@ -68,18 +71,22 @@ public sealed class BusyBarRenderer
         // added when that tier actually has something to show, so the cycle never lands on a
         // pointless "Count: 0". The SLA-risk page exists because P1 outranks SLA risk in the
         // overall precedence order — without cycling it in here, a P1 alert would silently hide a
-        // genuinely breaching ticket for as long as the P1 stayed open.
+        // genuinely breaching ticket for as long as the P1 stayed open. Line 1 for a priority-tier
+        // page is that tier's own name (the tenant's real Halo priority name, e.g. "CRITICAL" or
+        // "URGENT" — falling back to a generic "P{rank}" if the provider didn't supply one), not a
+        // hardcoded "CRITICAL" label — only a genuine rank-1 trigger is actually that name.
+        var triggerColor = state.IsVipTriggered ? VipColor : CriticalTriggerColor;
         var pages = new List<(string Line1, string Line2, string Line3, string Color)>
         {
-            ("CRITICAL", state.Reason, $"Count: {state.Count}", CriticalTriggerColor)
+            (state.Reason, "OPEN", $"Count: {state.Count}", triggerColor)
         };
         if (state.Rank2Count > 0)
         {
-            pages.Add(("CRITICAL", "P2 OPEN", $"Count: {state.Rank2Count}", CriticalP2Color));
+            pages.Add(((state.Rank2Name ?? "P2").ToUpperInvariant(), "OPEN", $"Count: {state.Rank2Count}", CriticalP2Color));
         }
         if (state.Rank3Count > 0)
         {
-            pages.Add(("CRITICAL", "P3 OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
+            pages.Add(((state.Rank3Name ?? "P3").ToUpperInvariant(), "OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
         }
         if (state.SlaRiskCount > 0)
         {
