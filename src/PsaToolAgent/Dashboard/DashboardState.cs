@@ -14,11 +14,14 @@ public sealed record NormalDashboardState : DashboardState
 
 /// <summary>Every ticket within the SLA-risk threshold, summarized as a count plus the worst
 /// (soonest-to-breach, or already-breached) one's remaining time — not just a single representative
-/// ticket, so the display doesn't silently drop how many others are also at risk.</summary>
+/// ticket, so the display doesn't silently drop how many others are also at risk. Also separately
+/// counts how many of those are already past due (<see cref="BreachedCount"/>), so a flat "BREACHED"
+/// label can say how many rather than just that at least one has.</summary>
 public sealed record SlaWarningDashboardState : DashboardState
 {
     public required int Count { get; init; }
     public required int WorstMinutesRemaining { get; init; }
+    public int BreachedCount { get; init; }
 }
 
 /// <summary>Covers both the "rank-1 tickets open" and "VIP tickets open" cases — <see cref="Reason"/>
@@ -36,4 +39,5 @@ public sealed record CriticalDashboardState : DashboardState
     public int Rank3Count { get; init; }
     public int SlaRiskCount { get; init; }
     public int? SlaRiskWorstMinutesRemaining { get; init; }
+    public int SlaRiskBreachedCount { get; init; }
 }

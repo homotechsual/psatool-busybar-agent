@@ -26,6 +26,7 @@ public static class PriorityEngine
             .OrderBy(t => t.MinutesRemaining)
             .ToList();
         var worstSlaRisk = slaRiskTickets.FirstOrDefault();
+        var slaRiskBreachedCount = slaRiskTickets.Count(t => t.MinutesRemaining <= 0);
 
         if (rank1Count > 0)
         {
@@ -36,7 +37,8 @@ public static class PriorityEngine
                 Rank2Count = rank2Count,
                 Rank3Count = rank3Count,
                 SlaRiskCount = slaRiskTickets.Count,
-                SlaRiskWorstMinutesRemaining = worstSlaRisk?.MinutesRemaining
+                SlaRiskWorstMinutesRemaining = worstSlaRisk?.MinutesRemaining,
+                SlaRiskBreachedCount = slaRiskBreachedCount
             };
         }
 
@@ -45,7 +47,8 @@ public static class PriorityEngine
             return new SlaWarningDashboardState
             {
                 Count = slaRiskTickets.Count,
-                WorstMinutesRemaining = worstSlaRisk.MinutesRemaining
+                WorstMinutesRemaining = worstSlaRisk.MinutesRemaining,
+                BreachedCount = slaRiskBreachedCount
             };
         }
 

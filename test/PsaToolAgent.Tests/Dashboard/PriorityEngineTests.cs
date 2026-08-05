@@ -66,6 +66,26 @@ public class PriorityEngineTests
     }
 
     [Fact]
+    public void Evaluate_SlaWarning_CountsOnlyBreachedTickets_SeparatelyFromTotalAtRisk()
+    {
+        var snapshot = EmptySnapshot() with
+        {
+            SlaRiskTickets = new[]
+            {
+                new SlaRiskTicket("101", 45),   // not yet breached
+                new SlaRiskTicket("102", -10),  // breached
+                new SlaRiskTicket("103", -5)    // breached
+            }
+        };
+
+        var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
+
+        var slaWarning = Assert.IsType<SlaWarningDashboardState>(state);
+        Assert.Equal(3, slaWarning.Count);
+        Assert.Equal(2, slaWarning.BreachedCount);
+    }
+
+    [Fact]
     public void Evaluate_IgnoresSlaTicket_WhenOutsideThreshold()
     {
         var snapshot = EmptySnapshot() with { SlaRiskTickets = new[] { new SlaRiskTicket("101", 90) } };
@@ -154,6 +174,25 @@ public class PriorityEngineTests
         Assert.Equal("P1 OPEN", critical.Reason);
         Assert.Equal(2, critical.SlaRiskCount);
         Assert.Equal(5, critical.SlaRiskWorstMinutesRemaining);
+    }
+
+    [Fact]
+    public void Evaluate_Critical_CountsOnlyBreachedSlaRiskTickets_SeparatelyFromTotalAtRisk()
+    {
+        var snapshot = new PsaSnapshot
+        {
+            OpenTicketCount = 10,
+            PriorityCounts = new Dictionary<int, int> { [1] = 1 },
+            SlaRiskTickets = new[] { new SlaRiskTicket("101", 45), new SlaRiskTicket("102", -10) },
+            UnassignedTicketCount = 0,
+            VipTickets = Array.Empty<VipTicket>()
+        };
+
+        var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
+
+        var critical = Assert.IsType<CriticalDashboardState>(state);
+        Assert.Equal(2, critical.SlaRiskCount);
+        Assert.Equal(1, critical.SlaRiskBreachedCount);
     }
 
     [Fact]

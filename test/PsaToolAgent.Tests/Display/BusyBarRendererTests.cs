@@ -69,16 +69,16 @@ public class BusyBarRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_SlaWarning_ShowsBreached_WhenWorstMinutesRemainingIsZeroOrNegative()
+    public async Task RenderAsync_SlaWarning_ShowsBreachedCount_WhenAnyTicketHasBreached()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new SlaWarningDashboardState { Count = 1, WorstMinutesRemaining = -30 };
+        var state = new SlaWarningDashboardState { Count = 3, WorstMinutesRemaining = -30, BreachedCount = 2 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"1 AT RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"BREACHED\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"3 AT RISK\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"2 BREACHED\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"-30m REMAIN\"", handler.LastRequestBody);
     }
 
@@ -189,20 +189,21 @@ public class BusyBarRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_Critical_SlaRiskPage_ShowsBreached_WhenWorstMinutesRemainingIsZeroOrNegative()
+    public async Task RenderAsync_Critical_SlaRiskPage_ShowsBreachedCount_WhenAnyTicketHasBreached()
     {
         var (renderer, handler) = CreateRenderer();
         var state = new CriticalDashboardState
         {
             Reason = "P1 OPEN",
             Count = 1,
-            SlaRiskCount = 1,
-            SlaRiskWorstMinutesRemaining = -15
+            SlaRiskCount = 2,
+            SlaRiskWorstMinutesRemaining = -15,
+            SlaRiskBreachedCount = 1
         };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"BREACHED\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"1 BREACHED\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"-15m REMAIN\"", handler.LastRequestBody);
     }
 

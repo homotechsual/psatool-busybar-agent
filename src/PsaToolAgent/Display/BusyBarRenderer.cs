@@ -58,7 +58,7 @@ public sealed class BusyBarRenderer
 
     private Task RenderSlaWarningAsync(SlaWarningDashboardState state, CancellationToken cancellationToken)
     {
-        var thirdLine = state.WorstMinutesRemaining <= 0 ? "BREACHED" : $"{state.WorstMinutesRemaining}m REMAIN";
+        var thirdLine = state.BreachedCount > 0 ? $"{state.BreachedCount} BREACHED" : $"{state.WorstMinutesRemaining}m REMAIN";
         return DrawAsync(new[] { "SLA RISK", $"{state.Count} AT RISK", thirdLine }, SlaWarningColor, cancellationToken);
     }
 
@@ -83,7 +83,7 @@ public sealed class BusyBarRenderer
         }
         if (state.SlaRiskCount > 0)
         {
-            var slaLine3 = state.SlaRiskWorstMinutesRemaining <= 0 ? "BREACHED" : $"{state.SlaRiskWorstMinutesRemaining}m REMAIN";
+            var slaLine3 = state.SlaRiskBreachedCount > 0 ? $"{state.SlaRiskBreachedCount} BREACHED" : $"{state.SlaRiskWorstMinutesRemaining}m REMAIN";
             pages.Add(("SLA RISK", $"{state.SlaRiskCount} AT RISK", slaLine3, SlaWarningColor));
         }
 
