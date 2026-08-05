@@ -1,0 +1,34 @@
+[INFO] [en] Creating an optimized production build...
+(node:79212) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[INFO] Docusaurus version: 3.10.2
+Node version: v26.4.0
+[ERROR] Error: Unable to build website for locale en.
+    at tryToBuildLocale (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\build.js:76:15)
+    at async J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\build.js:34:9
+    at async mapAsyncSequential (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\utils\lib\jsUtils.js:21:24)
+    at async Command.build (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\build.js:33:5)
+    at async Promise.all (index 0)
+    at async runCLI (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\cli.js:56:5)
+    at async file:///J:/Projects/Busy/psatool-busybar-agent/website/node_modules/@docusaurus/core/bin/docusaurus.mjs:44:3 {
+  [cause]: Error: Docusaurus found broken links!
+  
+  Please check the pages of your site in the list below, and make sure you don't reference any path that does not exist.
+  Note: it's possible to ignore broken links with the 'onBrokenLinks' Docusaurus configuration, and let the build pass.
+  
+  Exhaustive list of all broken links found:
+  - Broken link on source page path = /configuration:
+     -> linking to /deployment
+  
+      at throwError (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\logger\lib\logger.js:80:11)
+      at reportBrokenLinks (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\server\brokenLinks.js:250:47)
+      at handleBrokenLinks (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\server\brokenLinks.js:282:5)
+      at executeBrokenLinksCheck (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\buildLocale.js:123:47)
+      at J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\buildLocale.js:98:67
+      at Object.async (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\logger\lib\perfLogger.js:42:47)
+      at buildLocale (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\buildLocale.js:98:31)
+      at async runBuildLocaleTask (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\build.js:91:5)
+      at async J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\build.js:72:13
+      at async tryToBuildLocale (J:\Projects\Busy\psatool-busybar-agent\website\node_modules\@docusaurus\core\lib\commands\build\build.js:68:9)
+}
