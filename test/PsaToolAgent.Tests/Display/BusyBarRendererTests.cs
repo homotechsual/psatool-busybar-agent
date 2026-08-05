@@ -163,4 +163,59 @@ public class BusyBarRendererTests
         Assert.Contains("\"text\":\"VIP OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 1\"", handler.LastRequestBody);
     }
+
+    [Fact]
+    public async Task RenderAsync_Critical_CyclesInSlaRiskPage_WhenPresent()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new CriticalDashboardState
+        {
+            Reason = "P1 OPEN",
+            Count = 1,
+            Rank2Count = 0,
+            Rank3Count = 0,
+            SlaRiskTicketId = "101",
+            SlaRiskMinutesRemaining = 12
+        };
+
+        // Only 2 pages exist here (trigger, SLA risk) since Rank2/Rank3 are both 0.
+        await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
+
+        Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"12m REMAIN\"", handler.LastRequestBody);
+        Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"CRITICAL\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task RenderAsync_Critical_SlaRiskPage_ShowsBreached_WhenMinutesRemainingIsZeroOrNegative()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new CriticalDashboardState
+        {
+            Reason = "P1 OPEN",
+            Count = 1,
+            SlaRiskTicketId = "101",
+            SlaRiskMinutesRemaining = -15
+        };
+
+        await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
+
+        Assert.Contains("\"text\":\"BREACHED\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"-15m REMAIN\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task RenderAsync_Critical_SkipsSlaRiskPage_WhenNoBreachingTicket()
+    {
+        var (renderer, handler) = CreateRenderer();
+        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 1, SlaRiskTicketId = null };
+
+        // With no other tiers and no SLA-risk ticket, only 1 page exists — any cyclePage stays on it.
+        await renderer.RenderAsync(state, organizationName: null, cyclePage: 4, CancellationToken.None);
+
+        Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"SLA RISK\"", handler.LastRequestBody);
+    }
 }

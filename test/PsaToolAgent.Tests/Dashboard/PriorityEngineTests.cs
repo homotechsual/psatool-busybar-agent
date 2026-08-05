@@ -136,6 +136,45 @@ public class PriorityEngineTests
     }
 
     [Fact]
+    public void Evaluate_Critical_CarriesSlaRiskTicket_SoAP1AlertDoesNotHideABreachingTicket()
+    {
+        var snapshot = new PsaSnapshot
+        {
+            OpenTicketCount = 10,
+            PriorityCounts = new Dictionary<int, int> { [1] = 1 },
+            SlaRiskTickets = new[] { new SlaRiskTicket("101", 5) },
+            UnassignedTicketCount = 0,
+            VipTickets = Array.Empty<VipTicket>()
+        };
+
+        var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
+
+        var critical = Assert.IsType<CriticalDashboardState>(state);
+        Assert.Equal("P1 OPEN", critical.Reason);
+        Assert.Equal("101", critical.SlaRiskTicketId);
+        Assert.Equal(5, critical.SlaRiskMinutesRemaining);
+    }
+
+    [Fact]
+    public void Evaluate_Critical_LeavesSlaRiskTicketNull_WhenNoTicketIsWithinThreshold()
+    {
+        var snapshot = new PsaSnapshot
+        {
+            OpenTicketCount = 5,
+            PriorityCounts = new Dictionary<int, int> { [1] = 1 },
+            SlaRiskTickets = new[] { new SlaRiskTicket("101", 90) },
+            UnassignedTicketCount = 0,
+            VipTickets = Array.Empty<VipTicket>()
+        };
+
+        var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
+
+        var critical = Assert.IsType<CriticalDashboardState>(state);
+        Assert.Null(critical.SlaRiskTicketId);
+        Assert.Null(critical.SlaRiskMinutesRemaining);
+    }
+
+    [Fact]
     public void Evaluate_SlaWarningTakesPrecedenceOverVipAndUnassigned()
     {
         var snapshot = new PsaSnapshot

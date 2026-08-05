@@ -64,22 +64,32 @@ public sealed class BusyBarRenderer
 
     private Task RenderCriticalAsync(CriticalDashboardState state, int cyclePage, CancellationToken cancellationToken)
     {
-        // Page 0 (whatever triggered CRITICAL) is always shown; P2/P3 pages are only added when
-        // that tier actually has open tickets, so the cycle never lands on a pointless "Count: 0".
-        // Each page carries its own color, stepping down in severity as the tier does.
-        var pages = new List<(string SecondLine, int Count, string Color)> { (state.Reason, state.Count, CriticalTriggerColor) };
+        // Page 0 (whatever triggered CRITICAL) is always shown; P2/P3/SLA-risk pages are only
+        // added when that tier actually has something to show, so the cycle never lands on a
+        // pointless "Count: 0". The SLA-risk page exists because P1 outranks SLA risk in the
+        // overall precedence order — without cycling it in here, a P1 alert would silently hide a
+        // genuinely breaching ticket for as long as the P1 stayed open.
+        var pages = new List<(string Line1, string Line2, string Line3, string Color)>
+        {
+            ("CRITICAL", state.Reason, $"Count: {state.Count}", CriticalTriggerColor)
+        };
         if (state.Rank2Count > 0)
         {
-            pages.Add(("P2 OPEN", state.Rank2Count, CriticalP2Color));
+            pages.Add(("CRITICAL", "P2 OPEN", $"Count: {state.Rank2Count}", CriticalP2Color));
         }
         if (state.Rank3Count > 0)
         {
-            pages.Add(("P3 OPEN", state.Rank3Count, CriticalP3Color));
+            pages.Add(("CRITICAL", "P3 OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
+        }
+        if (state.SlaRiskTicketId is not null)
+        {
+            var slaLine3 = state.SlaRiskMinutesRemaining <= 0 ? "BREACHED" : $"{state.SlaRiskMinutesRemaining}m REMAIN";
+            pages.Add(("SLA RISK", $"Ticket #{state.SlaRiskTicketId}", slaLine3, SlaWarningColor));
         }
 
         var normalizedPage = ((cyclePage % pages.Count) + pages.Count) % pages.Count;
-        var (secondLine, count, color) = pages[normalizedPage];
-        return DrawAsync(new[] { "CRITICAL", secondLine, $"Count: {count}" }, color, cancellationToken);
+        var (line1, line2, line3, color) = pages[normalizedPage];
+        return DrawAsync(new[] { line1, line2, line3 }, color, cancellationToken);
     }
 
     private Task DrawAsync(IReadOnlyList<string> lines, string color, CancellationToken cancellationToken)
