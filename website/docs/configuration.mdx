@@ -15,7 +15,7 @@ real `ClientId` or `ClientSecret` values.
 | `Psa:SlaRiskThresholdMinutes` | `60` | A ticket is "SLA risk" at or below this many minutes to breach. |
 | `Psa:Halo:BaseUrl` | (none) | Your Halo tenant's API base URL. |
 | `Psa:Halo:ClientId` / `ClientSecret` | (none) | OAuth2 client credentials, set through environment variables or user secrets. |
-| `Psa:Halo:Scope` | `read:tickets` | OAuth2 scope requested. Set this to the minimum your Halo API client is actually granted; see Least privilege on the [Deployment](/configuration) page. |
+| `Psa:Halo:Scope` | `read:tickets` | OAuth2 scope requested. Set this to the minimum your Halo API client is actually granted; see Least privilege on the [Deployment](/deployment) page. |
 | `Psa:Halo:OrganisationId` | `1` | Halo organisation whose `portal_title` is used as the dashboard header, fetched once at startup and cached for the process lifetime. Falls back to `Dashboard:HeaderText` if the fetch fails or the organisation has no portal title set. |
 | `BusyBar:Address` | `10.0.4.20` | Network address of the BUSY Bar device. |
 | `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the normal mode display, used only when the Halo organisation lookup does not produce a header. |

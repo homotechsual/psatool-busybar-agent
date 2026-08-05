@@ -82,6 +82,7 @@ const config: Config = {
             {label: 'Configuration', to: '/configuration'},
             {label: 'Architecture', to: '/architecture'},
             {label: 'Adding a PSA provider', to: '/providers'},
+            {label: 'Deployment', to: '/deployment'},
           ],
         },
         {

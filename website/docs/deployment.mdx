@@ -1,0 +1,55 @@
+---
+sidebar_position: 5
+---
+
+# Deployment
+
+## Least privilege
+
+- **Halo API client**: register a dedicated Halo API client (Configuration, then Integrations,
+  then Halo API in Halo's admin UI) scoped to read only ticket and SLA access. Do not reuse an
+  admin scoped client, and confirm `Psa:Halo:Scope` matches the specific read only scope your Halo
+  tenant exposes for ticket data. The shipped default, `read:tickets`, is a reasonable starting
+  point, but verify a scope of that name actually exists and is granted to your API client in your
+  tenant.
+- **Container**: the image runs as a non root user (`app`, the built in .NET container user) with
+  no extra capabilities granted. `docker-compose.yml` additionally drops all Linux capabilities
+  (`cap_drop: ALL`), sets `no-new-privileges`, and mounts the root filesystem read only with a
+  `tmpfs` `/tmp`. Do not add `privileged: true` or extra `cap_add` entries to
+  `docker-compose.yml`; nothing here needs them.
+
+## Docker networking
+
+The BUSY Bar presents as a USB Ethernet adapter with its own IP (for example `10.0.4.20`), so
+reaching it from a container is a network routing question, not a USB passthrough one.
+
+- **Linux Docker host**: `network_mode: host` (already set in `docker-compose.yml`) is simplest.
+  The container shares the host's network stack and reaches the BUSY Bar exactly as the host does.
+- **Windows (Docker Desktop, WSL2)**: `network_mode: host` does not expose host only adapters,
+  like the BUSY Bar's USB Ethernet interface, into the WSL2 VM automatically; WSL2 has its own
+  network namespace. Two working options:
+  1. **Bridge the adapter into WSL2**: share the BUSY Bar's USB Ethernet adapter with the WSL2
+     network through `wsl --shutdown` plus a `.wslconfig` `[wsl2] networkingMode=mirrored` setting
+     (Windows 11 22H2 and later), which mirrors host network interfaces, including the USB
+     Ethernet one, into WSL2 directly. `network_mode: host` then works as it does on Linux.
+  2. **Run the worker directly on Windows instead of in Docker** for the BUSY Bar network hop.
+     Skipping Docker entirely is simpler than fighting WSL2 networking if mirrored mode is not
+     available on your Windows build.
+
+  Verify actual reachability once deployed with `curl -sf http://<BusyBar address>/api/version`.
+  Run this from the Docker host itself, or any machine on the same network as the BUSY Bar, not
+  from inside the container; the runtime image ships no `curl`.
+
+## Deploy
+
+```bash
+git clone https://github.com/homotechsual/psatool-busybar-agent.git
+cd psatool-busybar-agent
+cp .env.example .env
+```
+
+Fill in `HALO_CLIENT_ID`, `HALO_CLIENT_SECRET`, and `HALO_BASE_URL` in `.env`, then:
+
+```bash
+docker compose up -d --build
+```
