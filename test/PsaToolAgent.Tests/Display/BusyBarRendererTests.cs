@@ -91,7 +91,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
         Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 3\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FF0000FF\"", handler.LastRequestBody);
     }
@@ -105,7 +105,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
         Assert.Contains("\"text\":\"URGENT\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"P2 OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 7\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
@@ -130,7 +130,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 2, CancellationToken.None);
 
         Assert.Contains("\"text\":\"HIGH\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"P3 OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 9\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFFF00FF\"", handler.LastRequestBody);
     }
@@ -172,7 +172,9 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 3, CancellationToken.None);
 
         Assert.Contains("\"text\":\"VIP\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 1\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"P1 OPEN\"", handler.LastRequestBody);
     }
 
     [Fact]

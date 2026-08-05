@@ -73,20 +73,22 @@ public sealed class BusyBarRenderer
         // overall precedence order — without cycling it in here, a P1 alert would silently hide a
         // genuinely breaching ticket for as long as the P1 stayed open. Line 1 for a priority-tier
         // page is that tier's own name (the tenant's real Halo priority name, e.g. "CRITICAL" or
-        // "URGENT" — falling back to a generic "P{rank}" if the provider didn't supply one), not a
-        // hardcoded "CRITICAL" label — only a genuine rank-1 trigger is actually that name.
+        // "URGENT" — falling back to a generic "P{rank}" if the provider didn't supply one); line 2
+        // keeps the rank reference visible alongside it ("P1 OPEN"/"P2 OPEN"/"P3 OPEN") so both the
+        // real name and which tier it is are shown together. VIP has no rank to reference, so its
+        // line 2 is just "OPEN".
         var triggerColor = state.IsVipTriggered ? VipColor : CriticalTriggerColor;
         var pages = new List<(string Line1, string Line2, string Line3, string Color)>
         {
-            (state.Reason, "OPEN", $"Count: {state.Count}", triggerColor)
+            (state.Reason, state.IsVipTriggered ? "OPEN" : "P1 OPEN", $"Count: {state.Count}", triggerColor)
         };
         if (state.Rank2Count > 0)
         {
-            pages.Add(((state.Rank2Name ?? "P2").ToUpperInvariant(), "OPEN", $"Count: {state.Rank2Count}", CriticalP2Color));
+            pages.Add(((state.Rank2Name ?? "P2").ToUpperInvariant(), "P2 OPEN", $"Count: {state.Rank2Count}", CriticalP2Color));
         }
         if (state.Rank3Count > 0)
         {
-            pages.Add(((state.Rank3Name ?? "P3").ToUpperInvariant(), "OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
+            pages.Add(((state.Rank3Name ?? "P3").ToUpperInvariant(), "P3 OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
         }
         if (state.SlaRiskCount > 0)
         {
