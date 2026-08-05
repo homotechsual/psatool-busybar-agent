@@ -79,6 +79,7 @@ const config: Config = {
           title: 'Docs',
           items: [
             {label: 'Getting Started', to: '/'},
+            {label: 'Screenshots', to: '/screenshots'},
             {label: 'Configuration', to: '/configuration'},
             {label: 'Architecture', to: '/architecture'},
             {label: 'Adding a PSA provider', to: '/providers'},

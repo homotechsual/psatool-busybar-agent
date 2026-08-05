@@ -1,0 +1,66 @@
+---
+sidebar_position: 2
+---
+
+# Screenshots
+
+What each display mode looks like on the BUSY Bar.
+
+## Normal
+
+Shown when nothing needs attention: the org name (or the configured
+[`Dashboard:HeaderText`](/configuration)), open counts for rank 1 and rank 2 tickets, and an SLA
+status line.
+
+![Normal display showing the org name, P1 and P2 open counts, and SLA: OK](/img/screenshots/normal.png)
+
+If unassigned tickets exist and nothing more urgent does, the third line becomes an unassigned
+count instead of "SLA: OK".
+
+![Normal display with an unassigned ticket callout](/img/screenshots/unassigned.png)
+
+## SLA warning
+
+Shown when tickets are approaching their SLA deadline, with no rank 1, VIP, or already critical
+condition in play.
+
+![SLA warning display showing 3 tickets at risk with 12 minutes remaining](/img/screenshots/sla-warning.png)
+
+If any of those tickets have already breached, the third line switches to a breached count.
+
+![SLA warning display showing 3 tickets at risk with 2 already breached](/img/screenshots/sla-breach.png)
+
+## Critical
+
+Shown when rank 1 tickets are open, or a VIP customer has an open ticket. Cycles through every
+relevant page every `Dashboard:DisplayCycleSeconds`; see [Architecture](/architecture) for the
+full page order.
+
+The trigger page shows the real priority name from the PSA when it supplies one, plus the open
+count and the org name.
+
+![Critical display showing CRITICAL (P1), an open count, and the org name](/img/screenshots/critical.png)
+
+When the provider does not supply a real priority name, it falls back to a generic rank label.
+
+![Critical display falling back to a generic P1 label](/img/screenshots/critical-fallback.png)
+
+When rank 2 or rank 3 tickets are also open, each tier gets its own page in the cycle.
+
+![Critical display cycled to the rank 2 tier, showing URGENT (P2)](/img/screenshots/urgent.png)
+
+![Critical display cycled to the rank 3 tier, showing HIGH (P3)](/img/screenshots/high.png)
+
+SLA risk tickets get a page of their own too, even when rank 1 is what triggered critical mode,
+so a breaching ticket never goes unseen just because something more urgent is also happening.
+
+![Critical display cycled to the SLA risk page, showing 3 at risk with 8 minutes remaining](/img/screenshots/sla-risk.png)
+
+A VIP customer's open ticket triggers critical mode with its own distinct color and label, not
+the rank 1 styling, since VIP is a different kind of signal.
+
+![Critical display triggered by a VIP ticket, shown in a distinct color](/img/screenshots/vip.png)
+
+### The full cycle
+
+![The critical display cycling through all four of its pages](/img/screenshots/loop.gif)
