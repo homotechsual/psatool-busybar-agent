@@ -110,30 +110,35 @@ public sealed class HaloPsaDataProvider : IPsaDataProvider
     /// SLA-risk thresholding is deliberately NOT applied here — <see cref="PsaSnapshot.SlaRiskTickets"/>
     /// carries every ticket with a known SLA time remaining (including already-breached, negative
     /// values); <c>PriorityEngine</c> is the single place that applies the SLA-risk threshold.
+    /// On-hold tickets are excluded entirely: a paused ticket (awaiting customer, parts, a
+    /// scheduled window, etc.) doesn't need anyone's immediate attention, so it must not drive a
+    /// P1/SLA/VIP/unassigned signal on the display.
     /// </summary>
     internal static PsaSnapshot MapSnapshot(IReadOnlyList<HaloTicket> tickets)
     {
-        var priorityCounts = tickets
+        var activeTickets = tickets.Where(t => !t.OnHold).ToList();
+
+        var priorityCounts = activeTickets
             .GroupBy(t => t.PriorityId)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var slaRiskTickets = tickets
+        var slaRiskTickets = activeTickets
             .Where(t => t.SlaTimeLeftHours is not null)
             .Select(t => new SlaRiskTicket(t.Id.ToString(), (int)(t.SlaTimeLeftHours!.Value * 60)))
             .ToList();
 
         // This tenant represents "no agent assigned" as agent_id 0 — verify this convention
         // against your own Halo tenant if ticket routing differs.
-        var unassignedCount = tickets.Count(t => t.AgentId == 0);
+        var unassignedCount = activeTickets.Count(t => t.AgentId == 0);
 
-        var vipTickets = tickets
+        var vipTickets = activeTickets
             .Where(t => t.IsVip)
             .Select(t => new VipTicket(t.Id.ToString(), t.ClientName))
             .ToList();
 
         return new PsaSnapshot
         {
-            OpenTicketCount = tickets.Count,
+            OpenTicketCount = activeTickets.Count,
             PriorityCounts = priorityCounts,
             SlaRiskTickets = slaRiskTickets,
             UnassignedTicketCount = unassignedCount,

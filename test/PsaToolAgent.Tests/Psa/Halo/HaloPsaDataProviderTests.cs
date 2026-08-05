@@ -28,6 +28,27 @@ public class HaloPsaDataProviderTests
     }
 
     [Fact]
+    public void MapSnapshot_ExcludesOnHoldTickets_FromAllCounts()
+    {
+        var tickets = new[]
+        {
+            // A single ticket engineered to hit every count this method produces, to prove
+            // on-hold exclusion is applied consistently rather than to just one of them.
+            new HaloTicket(1, "On hold P1 VIP unassigned", PriorityId: 1, AgentId: 0, ClientName: "Acme", IsVip: true, SlaTimeLeftHours: 0.5, OnHold: true),
+            new HaloTicket(2, "Active P2", PriorityId: 2, AgentId: 3, ClientName: "Acme", IsVip: false, SlaTimeLeftHours: null, OnHold: false)
+        };
+
+        var snapshot = HaloPsaDataProvider.MapSnapshot(tickets);
+
+        Assert.Equal(1, snapshot.OpenTicketCount);
+        Assert.False(snapshot.PriorityCounts.ContainsKey(1));
+        Assert.Equal(1, snapshot.PriorityCounts[2]);
+        Assert.Empty(snapshot.SlaRiskTickets);
+        Assert.Equal(0, snapshot.UnassignedTicketCount);
+        Assert.Empty(snapshot.VipTickets);
+    }
+
+    [Fact]
     public void MapSnapshot_IdentifiesUnassignedTickets_ByZeroAgentId()
     {
         var tickets = new[]
