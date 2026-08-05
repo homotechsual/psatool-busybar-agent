@@ -1,0 +1,27 @@
+---
+sidebar_position: 1
+slug: /
+---
+
+# Getting started
+
+**PSA BusyBar Agent** polls a PSA (Halo first, others pluggable) on a timer, works out the current
+helpdesk priority, and renders the result to a physical BUSY Bar over the network.
+
+```
+IPsaDataProvider -> PsaSnapshot -> PriorityEngine -> DashboardState -> BusyBarRenderer
+```
+
+## Quick start
+
+```bash
+git clone https://github.com/homotechsual/psatool-busybar-agent.git
+cd psatool-busybar-agent
+cp .env.example .env
+```
+
+Fill in `HALO_CLIENT_ID`, `HALO_CLIENT_SECRET`, and `HALO_BASE_URL` in `.env`, then:
+
+```bash
+docker compose up -d --build
+```
