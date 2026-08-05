@@ -9,10 +9,13 @@ public sealed class BusyBarRenderer
 
     // #RRGGBBAA, matching TextElement.Color's format. A traffic-light scheme so urgency is
     // visible at a glance without reading the text: white/neutral when calm, amber for an
-    // SLA-risk warning, red for critical (P1 or VIP open).
+    // SLA-risk warning. Within CRITICAL, each cycled page is colored by its own severity —
+    // red for the trigger (P1/VIP), stepping down through orange (P2) and yellow (P3).
     private const string NormalColor = "#FFFFFFFF";
     private const string SlaWarningColor = "#FFA500FF";
-    private const string CriticalColor = "#FF0000FF";
+    private const string CriticalTriggerColor = "#FF0000FF";
+    private const string CriticalP2Color = "#FFA500FF";
+    private const string CriticalP3Color = "#FFFF00FF";
 
     private readonly Busy.Bar.BusyBar _bar;
     private readonly DashboardOptions _options;
@@ -63,19 +66,20 @@ public sealed class BusyBarRenderer
     {
         // Page 0 (whatever triggered CRITICAL) is always shown; P2/P3 pages are only added when
         // that tier actually has open tickets, so the cycle never lands on a pointless "Count: 0".
-        var pages = new List<(string SecondLine, int Count)> { (state.Reason, state.Count) };
+        // Each page carries its own color, stepping down in severity as the tier does.
+        var pages = new List<(string SecondLine, int Count, string Color)> { (state.Reason, state.Count, CriticalTriggerColor) };
         if (state.Rank2Count > 0)
         {
-            pages.Add(("P2 OPEN", state.Rank2Count));
+            pages.Add(("P2 OPEN", state.Rank2Count, CriticalP2Color));
         }
         if (state.Rank3Count > 0)
         {
-            pages.Add(("P3 OPEN", state.Rank3Count));
+            pages.Add(("P3 OPEN", state.Rank3Count, CriticalP3Color));
         }
 
         var normalizedPage = ((cyclePage % pages.Count) + pages.Count) % pages.Count;
-        var (secondLine, count) = pages[normalizedPage];
-        return DrawAsync(new[] { "CRITICAL", secondLine, $"Count: {count}" }, CriticalColor, cancellationToken);
+        var (secondLine, count, color) = pages[normalizedPage];
+        return DrawAsync(new[] { "CRITICAL", secondLine, $"Count: {count}" }, color, cancellationToken);
     }
 
     private Task DrawAsync(IReadOnlyList<string> lines, string color, CancellationToken cancellationToken)

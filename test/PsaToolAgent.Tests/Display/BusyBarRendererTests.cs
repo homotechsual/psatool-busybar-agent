@@ -107,6 +107,7 @@ public class BusyBarRendererTests
         Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"P2 OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 7\"", handler.LastRequestBody);
+        Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -120,6 +121,7 @@ public class BusyBarRendererTests
         Assert.Contains("\"text\":\"CRITICAL\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"P3 OPEN\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"Count: 9\"", handler.LastRequestBody);
+        Assert.Contains("\"color\":\"#FFFF00FF\"", handler.LastRequestBody);
     }
 
     [Fact]
