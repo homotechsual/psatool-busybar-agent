@@ -42,7 +42,7 @@ public sealed class BusyBarRenderer
         {
             NormalDashboardState normal => RenderNormalAsync(normal, organizationName, cancellationToken),
             SlaWarningDashboardState slaWarning => RenderSlaWarningAsync(slaWarning, cancellationToken),
-            CriticalDashboardState critical => RenderCriticalAsync(critical, cyclePage, cancellationToken),
+            CriticalDashboardState critical => RenderCriticalAsync(critical, organizationName, cyclePage, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(state))
         };
 
@@ -55,17 +55,17 @@ public sealed class BusyBarRenderer
     private Task RenderNormalAsync(NormalDashboardState state, string? organizationName, CancellationToken cancellationToken)
     {
         var headerText = string.IsNullOrWhiteSpace(organizationName) ? _options.HeaderText : organizationName;
-        var thirdLine = state.UnassignedCount > 0 ? $"UNASSIGN:{state.UnassignedCount}" : "SLA: OK";
+        var thirdLine = state.UnassignedCount > 0 ? $"Unassigned: {state.UnassignedCount}" : "SLA: OK";
         return DrawAsync(new[] { headerText, $"P1:{state.Rank1Count} P2:{state.Rank2Count}", thirdLine }, NormalColor, cancellationToken);
     }
 
     private Task RenderSlaWarningAsync(SlaWarningDashboardState state, CancellationToken cancellationToken)
     {
-        var thirdLine = state.BreachedCount > 0 ? $"{state.BreachedCount} BREACHED" : $"{state.WorstMinutesRemaining}m REMAIN";
-        return DrawAsync(new[] { "SLA RISK", $"{state.Count} AT RISK", thirdLine }, SlaWarningColor, cancellationToken);
+        var thirdLine = state.BreachedCount > 0 ? $"{state.BreachedCount} breached" : $"{state.WorstMinutesRemaining}m remain";
+        return DrawAsync(new[] { "SLA risk", $"{state.Count} at risk", thirdLine }, SlaWarningColor, cancellationToken);
     }
 
-    private Task RenderCriticalAsync(CriticalDashboardState state, int cyclePage, CancellationToken cancellationToken)
+    private Task RenderCriticalAsync(CriticalDashboardState state, string? organizationName, int cyclePage, CancellationToken cancellationToken)
     {
         // Page 0 (whatever triggered CRITICAL) is always shown; P2/P3/SLA-risk pages are only
         // added when that tier actually has something to show, so the cycle never lands on a
@@ -73,34 +73,38 @@ public sealed class BusyBarRenderer
         // overall precedence order — without cycling it in here, a P1 alert would silently hide a
         // genuinely breaching ticket for as long as the P1 stayed open.
         //
-        // Priority-tier pages are 2 lines, compact: "{name} (P{rank})" then "OPEN Count: {n}" — the
-        // "(P{rank})" suffix only appears when a real name is actually known, so the generic
-        // fallback case (no real name from the provider) doesn't read as the redundant "P2 (P2)".
-        // VIP has no rank to reference, so it's just "VIP" / "OPEN Count: {n}". The SLA-risk page
-        // stays 3 lines — a different kind of signal (urgency, not a priority tier), unrelated to
-        // this compacting.
+        // Priority-tier pages: "{NAME} (P{rank})" / "Open count: {n}" / the org name — the org name
+        // fills the line that would otherwise sit empty now the first two lines are compact, and
+        // restores the org context that's otherwise only shown in NORMAL mode. The "(P{rank})"
+        // suffix only appears when a real name is actually known, so the generic fallback case (no
+        // real name from the provider) doesn't read as the redundant "P2 (P2)". Sentence case
+        // everywhere except the priority name itself (kept upper case so it stands out as the
+        // at-a-glance signal). The SLA-risk page is unaffected by the org-name change — a
+        // different kind of signal (urgency, not a priority tier), already using all 3 lines for
+        // its own info, with no room to also show the org name.
+        var headerText = string.IsNullOrWhiteSpace(organizationName) ? _options.HeaderText : organizationName;
         var triggerColor = state.IsVipTriggered ? VipColor : CriticalTriggerColor;
         var triggerLine1 = !state.IsVipTriggered && state.Rank1Name is not null ? $"{state.Reason} (P1)" : state.Reason;
         var pages = new List<(string[] Lines, string Color)>
         {
-            (new[] { triggerLine1, $"OPEN Count: {state.Count}" }, triggerColor)
+            (new[] { triggerLine1, $"Open count: {state.Count}", headerText }, triggerColor)
         };
         if (state.Rank2Count > 0)
         {
             var rank2Label = (state.Rank2Name ?? "P2").ToUpperInvariant();
             var rank2Line1 = state.Rank2Name is not null ? $"{rank2Label} (P2)" : rank2Label;
-            pages.Add((new[] { rank2Line1, $"OPEN Count: {state.Rank2Count}" }, CriticalP2Color));
+            pages.Add((new[] { rank2Line1, $"Open count: {state.Rank2Count}", headerText }, CriticalP2Color));
         }
         if (state.Rank3Count > 0)
         {
             var rank3Label = (state.Rank3Name ?? "P3").ToUpperInvariant();
             var rank3Line1 = state.Rank3Name is not null ? $"{rank3Label} (P3)" : rank3Label;
-            pages.Add((new[] { rank3Line1, $"OPEN Count: {state.Rank3Count}" }, CriticalP3Color));
+            pages.Add((new[] { rank3Line1, $"Open count: {state.Rank3Count}", headerText }, CriticalP3Color));
         }
         if (state.SlaRiskCount > 0)
         {
-            var slaLine3 = state.SlaRiskBreachedCount > 0 ? $"{state.SlaRiskBreachedCount} BREACHED" : $"{state.SlaRiskWorstMinutesRemaining}m REMAIN";
-            pages.Add((new[] { "SLA RISK", $"{state.SlaRiskCount} AT RISK", slaLine3 }, SlaWarningColor));
+            var slaLine3 = state.SlaRiskBreachedCount > 0 ? $"{state.SlaRiskBreachedCount} breached" : $"{state.SlaRiskWorstMinutesRemaining}m remain";
+            pages.Add((new[] { "SLA risk", $"{state.SlaRiskCount} at risk", slaLine3 }, SlaWarningColor));
         }
 
         var normalizedPage = ((cyclePage % pages.Count) + pages.Count) % pages.Count;
@@ -108,8 +112,21 @@ public sealed class BusyBarRenderer
         return DrawAsync(lines, color, cancellationToken);
     }
 
+    private const int CanvasHeight = 16;
+    private const int LineHeight = 5;
+
     private Task DrawAsync(IReadOnlyList<string> lines, string color, CancellationToken cancellationToken)
     {
+        // The BUSY Bar's canvas is only 72x16px (DisplayCanvas.Width/Height) — TextFont.Normal is
+        // too tall to stack even 3 lines in that height at all (confirmed on real hardware: lines
+        // overlapped completely). Tiny is the smallest available font, at roughly LineHeight px per
+        // line. Vertically centering the block (rather than always anchoring it to Y=0) means a
+        // page with fewer lines than the canvas can fit doesn't end up pushed to the top with dead
+        // space at the bottom — 3 lines happen to fill the canvas almost exactly, so this leaves
+        // that case unchanged.
+        var blockHeight = lines.Count * LineHeight;
+        var yOffset = Math.Max(0, (CanvasHeight - blockHeight) / 2);
+
         var elements = new List<Busy.Bar.DisplayElement>(lines.Count);
         for (var i = 0; i < lines.Count; i++)
         {
@@ -117,13 +134,8 @@ public sealed class BusyBarRenderer
             {
                 Id = i.ToString(),
                 Text = lines[i],
-                // The BUSY Bar's canvas is only 72x16px (DisplayCanvas.Width/Height) — TextFont.Normal
-                // is too tall to stack 3 lines in that height at all (confirmed on real hardware: lines
-                // overlapped completely). Tiny is the smallest available font; even so, this is a very
-                // tight fit for 3 lines — verify against a real device and adjust Y spacing, or drop to
-                // 2 lines / use ScrollRate for long text, if anything still overlaps or clips.
                 Font = Busy.Bar.TextFont.Tiny,
-                Y = i * 5,
+                Y = yOffset + (i * LineHeight),
                 Color = color
             });
         }

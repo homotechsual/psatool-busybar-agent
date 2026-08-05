@@ -51,7 +51,7 @@ public class BusyBarRendererTests
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"UNASSIGN:4\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Unassigned: 4\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -62,9 +62,9 @@ public class BusyBarRendererTests
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"3 AT RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"12m REMAIN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"SLA risk\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"3 at risk\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"12m remain\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
 
@@ -76,10 +76,10 @@ public class BusyBarRendererTests
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"3 AT RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"2 BREACHED\"", handler.LastRequestBody);
-        Assert.DoesNotContain("\"text\":\"-30m REMAIN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"SLA risk\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"3 at risk\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"2 breached\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"-30m remain\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
         Assert.Contains("\"text\":\"CRITICAL (P1)\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN Count: 3\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Open count: 3\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FF0000FF\"", handler.LastRequestBody);
     }
 
@@ -116,7 +116,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
         Assert.Contains("\"text\":\"URGENT (P2)\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN Count: 7\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Open count: 7\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
 
@@ -141,7 +141,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 2, CancellationToken.None);
 
         Assert.Contains("\"text\":\"HIGH (P3)\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN Count: 9\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Open count: 9\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFFF00FF\"", handler.LastRequestBody);
     }
 
@@ -154,7 +154,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 5, CancellationToken.None);
 
         Assert.Contains("\"text\":\"P1\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN Count: 3\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Open count: 3\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"P2\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"P3\"", handler.LastRequestBody);
     }
@@ -169,7 +169,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 2, CancellationToken.None);
 
         Assert.Contains("\"text\":\"P1\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN Count: 3\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Open count: 3\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"P3\"", handler.LastRequestBody);
     }
 
@@ -182,7 +182,7 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 3, CancellationToken.None);
 
         Assert.Contains("\"text\":\"VIP\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"OPEN Count: 1\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"Open count: 1\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"VIP (P1)\"", handler.LastRequestBody);
     }
 
@@ -215,9 +215,9 @@ public class BusyBarRendererTests
         // Only 2 pages exist here (trigger, SLA risk) since Rank2/Rank3 are both 0.
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"2 AT RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"12m REMAIN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"SLA risk\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"2 at risk\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"12m remain\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"CRITICAL\"", handler.LastRequestBody);
     }
@@ -237,8 +237,8 @@ public class BusyBarRendererTests
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
-        Assert.Contains("\"text\":\"1 BREACHED\"", handler.LastRequestBody);
-        Assert.DoesNotContain("\"text\":\"-15m REMAIN\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"1 breached\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"-15m remain\"", handler.LastRequestBody);
     }
 
     [Fact]
@@ -251,6 +251,6 @@ public class BusyBarRendererTests
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 4, CancellationToken.None);
 
         Assert.Contains("\"text\":\"P1\"", handler.LastRequestBody);
-        Assert.DoesNotContain("\"text\":\"SLA RISK\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"text\":\"SLA risk\"", handler.LastRequestBody);
     }
 }
