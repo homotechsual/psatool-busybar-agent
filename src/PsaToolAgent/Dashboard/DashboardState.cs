@@ -39,6 +39,12 @@ public sealed record CriticalDashboardState : DashboardState
     public required string Reason { get; init; }
     public required int Count { get; init; }
     public bool IsVipTriggered { get; init; }
+
+    /// <summary>The raw (non-fallback) real name for rank 1, if the provider supplied one — null
+    /// when <see cref="Reason"/> is the generic "P1" fallback, or when VIP-triggered. Kept separate
+    /// from <see cref="Reason"/> only so the display can tell a real name from the fallback without
+    /// a fragile string comparison.</summary>
+    public string? Rank1Name { get; init; }
     public int Rank2Count { get; init; }
     public string? Rank2Name { get; init; }
     public int Rank3Count { get; init; }

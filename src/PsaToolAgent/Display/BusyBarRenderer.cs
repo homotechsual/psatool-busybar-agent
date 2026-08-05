@@ -71,34 +71,41 @@ public sealed class BusyBarRenderer
         // added when that tier actually has something to show, so the cycle never lands on a
         // pointless "Count: 0". The SLA-risk page exists because P1 outranks SLA risk in the
         // overall precedence order — without cycling it in here, a P1 alert would silently hide a
-        // genuinely breaching ticket for as long as the P1 stayed open. Line 1 for a priority-tier
-        // page is that tier's own name (the tenant's real Halo priority name, e.g. "CRITICAL" or
-        // "URGENT" — falling back to a generic "P{rank}" if the provider didn't supply one); line 2
-        // keeps the rank reference visible alongside it ("P1 OPEN"/"P2 OPEN"/"P3 OPEN") so both the
-        // real name and which tier it is are shown together. VIP has no rank to reference, so its
-        // line 2 is just "OPEN".
+        // genuinely breaching ticket for as long as the P1 stayed open.
+        //
+        // Priority-tier pages are 2 lines, compact: "{name} (P{rank})" then "OPEN Count: {n}" — the
+        // "(P{rank})" suffix only appears when a real name is actually known, so the generic
+        // fallback case (no real name from the provider) doesn't read as the redundant "P2 (P2)".
+        // VIP has no rank to reference, so it's just "VIP" / "OPEN Count: {n}". The SLA-risk page
+        // stays 3 lines — a different kind of signal (urgency, not a priority tier), unrelated to
+        // this compacting.
         var triggerColor = state.IsVipTriggered ? VipColor : CriticalTriggerColor;
-        var pages = new List<(string Line1, string Line2, string Line3, string Color)>
+        var triggerLine1 = !state.IsVipTriggered && state.Rank1Name is not null ? $"{state.Reason} (P1)" : state.Reason;
+        var pages = new List<(string[] Lines, string Color)>
         {
-            (state.Reason, state.IsVipTriggered ? "OPEN" : "P1 OPEN", $"Count: {state.Count}", triggerColor)
+            (new[] { triggerLine1, $"OPEN Count: {state.Count}" }, triggerColor)
         };
         if (state.Rank2Count > 0)
         {
-            pages.Add(((state.Rank2Name ?? "P2").ToUpperInvariant(), "P2 OPEN", $"Count: {state.Rank2Count}", CriticalP2Color));
+            var rank2Label = (state.Rank2Name ?? "P2").ToUpperInvariant();
+            var rank2Line1 = state.Rank2Name is not null ? $"{rank2Label} (P2)" : rank2Label;
+            pages.Add((new[] { rank2Line1, $"OPEN Count: {state.Rank2Count}" }, CriticalP2Color));
         }
         if (state.Rank3Count > 0)
         {
-            pages.Add(((state.Rank3Name ?? "P3").ToUpperInvariant(), "P3 OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
+            var rank3Label = (state.Rank3Name ?? "P3").ToUpperInvariant();
+            var rank3Line1 = state.Rank3Name is not null ? $"{rank3Label} (P3)" : rank3Label;
+            pages.Add((new[] { rank3Line1, $"OPEN Count: {state.Rank3Count}" }, CriticalP3Color));
         }
         if (state.SlaRiskCount > 0)
         {
             var slaLine3 = state.SlaRiskBreachedCount > 0 ? $"{state.SlaRiskBreachedCount} BREACHED" : $"{state.SlaRiskWorstMinutesRemaining}m REMAIN";
-            pages.Add(("SLA RISK", $"{state.SlaRiskCount} AT RISK", slaLine3, SlaWarningColor));
+            pages.Add((new[] { "SLA RISK", $"{state.SlaRiskCount} AT RISK", slaLine3 }, SlaWarningColor));
         }
 
         var normalizedPage = ((cyclePage % pages.Count) + pages.Count) % pages.Count;
-        var (line1, line2, line3, color) = pages[normalizedPage];
-        return DrawAsync(new[] { line1, line2, line3 }, color, cancellationToken);
+        var (lines, color) = pages[normalizedPage];
+        return DrawAsync(lines, color, cancellationToken);
     }
 
     private Task DrawAsync(IReadOnlyList<string> lines, string color, CancellationToken cancellationToken)

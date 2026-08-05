@@ -38,6 +38,7 @@ public static class PriorityEngine
                 Reason = (rank1Name ?? "P1").ToUpperInvariant(),
                 Count = rank1Count,
                 IsVipTriggered = false,
+                Rank1Name = rank1Name,
                 Rank2Count = rank2Count,
                 Rank2Name = rank2Name,
                 Rank3Count = rank3Count,
