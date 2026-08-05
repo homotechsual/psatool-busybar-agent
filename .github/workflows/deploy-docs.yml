@@ -58,7 +58,7 @@ jobs:
         run: yarn build
 
       # actions/checkout leaves the repo in a detached HEAD, so wrangler can't infer the
-      # branch from git state, without --branch it falls back to the commit SHA, which
+      # branch from git state — without --branch it falls back to the commit SHA, which
       # Cloudflare Pages treats as a non-production deploy even on pushes to main.
       - name: Publish to Cloudflare Pages
         id: cloudflare-pages-deploy
