@@ -55,29 +55,29 @@ public class BusyBarRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_SlaWarning_ShowsTicketIdAndMinutesRemaining()
+    public async Task RenderAsync_SlaWarning_ShowsCountAndWorstMinutesRemaining()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new SlaWarningDashboardState { TicketId = "101", MinutesRemaining = 12 };
+        var state = new SlaWarningDashboardState { Count = 3, WorstMinutesRemaining = 12 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"3 AT RISK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"12m REMAIN\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
     }
 
     [Fact]
-    public async Task RenderAsync_SlaWarning_ShowsBreached_WhenMinutesRemainingIsZeroOrNegative()
+    public async Task RenderAsync_SlaWarning_ShowsBreached_WhenWorstMinutesRemainingIsZeroOrNegative()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new SlaWarningDashboardState { TicketId = "101", MinutesRemaining = -30 };
+        var state = new SlaWarningDashboardState { Count = 1, WorstMinutesRemaining = -30 };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 0, CancellationToken.None);
 
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"1 AT RISK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"BREACHED\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"-30m REMAIN\"", handler.LastRequestBody);
     }
@@ -174,30 +174,30 @@ public class BusyBarRendererTests
             Count = 1,
             Rank2Count = 0,
             Rank3Count = 0,
-            SlaRiskTicketId = "101",
-            SlaRiskMinutesRemaining = 12
+            SlaRiskCount = 2,
+            SlaRiskWorstMinutesRemaining = 12
         };
 
         // Only 2 pages exist here (trigger, SLA risk) since Rank2/Rank3 are both 0.
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
 
         Assert.Contains("\"text\":\"SLA RISK\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"Ticket #101\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"2 AT RISK\"", handler.LastRequestBody);
         Assert.Contains("\"text\":\"12m REMAIN\"", handler.LastRequestBody);
         Assert.Contains("\"color\":\"#FFA500FF\"", handler.LastRequestBody);
         Assert.DoesNotContain("\"text\":\"CRITICAL\"", handler.LastRequestBody);
     }
 
     [Fact]
-    public async Task RenderAsync_Critical_SlaRiskPage_ShowsBreached_WhenMinutesRemainingIsZeroOrNegative()
+    public async Task RenderAsync_Critical_SlaRiskPage_ShowsBreached_WhenWorstMinutesRemainingIsZeroOrNegative()
     {
         var (renderer, handler) = CreateRenderer();
         var state = new CriticalDashboardState
         {
             Reason = "P1 OPEN",
             Count = 1,
-            SlaRiskTicketId = "101",
-            SlaRiskMinutesRemaining = -15
+            SlaRiskCount = 1,
+            SlaRiskWorstMinutesRemaining = -15
         };
 
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 1, CancellationToken.None);
@@ -210,7 +210,7 @@ public class BusyBarRendererTests
     public async Task RenderAsync_Critical_SkipsSlaRiskPage_WhenNoBreachingTicket()
     {
         var (renderer, handler) = CreateRenderer();
-        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 1, SlaRiskTicketId = null };
+        var state = new CriticalDashboardState { Reason = "P1 OPEN", Count = 1, SlaRiskCount = 0 };
 
         // With no other tiers and no SLA-risk ticket, only 1 page exists — any cyclePage stays on it.
         await renderer.RenderAsync(state, organizationName: null, cyclePage: 4, CancellationToken.None);

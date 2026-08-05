@@ -58,8 +58,8 @@ public sealed class BusyBarRenderer
 
     private Task RenderSlaWarningAsync(SlaWarningDashboardState state, CancellationToken cancellationToken)
     {
-        var thirdLine = state.MinutesRemaining <= 0 ? "BREACHED" : $"{state.MinutesRemaining}m REMAIN";
-        return DrawAsync(new[] { "SLA RISK", $"Ticket #{state.TicketId}", thirdLine }, SlaWarningColor, cancellationToken);
+        var thirdLine = state.WorstMinutesRemaining <= 0 ? "BREACHED" : $"{state.WorstMinutesRemaining}m REMAIN";
+        return DrawAsync(new[] { "SLA RISK", $"{state.Count} AT RISK", thirdLine }, SlaWarningColor, cancellationToken);
     }
 
     private Task RenderCriticalAsync(CriticalDashboardState state, int cyclePage, CancellationToken cancellationToken)
@@ -81,10 +81,10 @@ public sealed class BusyBarRenderer
         {
             pages.Add(("CRITICAL", "P3 OPEN", $"Count: {state.Rank3Count}", CriticalP3Color));
         }
-        if (state.SlaRiskTicketId is not null)
+        if (state.SlaRiskCount > 0)
         {
-            var slaLine3 = state.SlaRiskMinutesRemaining <= 0 ? "BREACHED" : $"{state.SlaRiskMinutesRemaining}m REMAIN";
-            pages.Add(("SLA RISK", $"Ticket #{state.SlaRiskTicketId}", slaLine3, SlaWarningColor));
+            var slaLine3 = state.SlaRiskWorstMinutesRemaining <= 0 ? "BREACHED" : $"{state.SlaRiskWorstMinutesRemaining}m REMAIN";
+            pages.Add(("SLA RISK", $"{state.SlaRiskCount} AT RISK", slaLine3, SlaWarningColor));
         }
 
         var normalizedPage = ((cyclePage % pages.Count) + pages.Count) % pages.Count;

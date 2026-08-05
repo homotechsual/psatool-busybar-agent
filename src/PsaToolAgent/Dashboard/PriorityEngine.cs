@@ -18,11 +18,14 @@ public static class PriorityEngine
 
         // Computed up front (not just when SLA risk is the primary trigger) so a P1-triggered
         // CRITICAL can still carry SLA-risk info instead of silently hiding it — P1 outranks SLA
-        // risk in precedence, but that must not mean a genuinely breaching ticket goes invisible.
-        var worstSlaRisk = snapshot.SlaRiskTickets
+        // risk in precedence, but that must not mean breaching tickets go invisible. Every ticket
+        // within threshold is kept (not just the worst one) so the display can report how many are
+        // actually at risk, not just a single representative ticket.
+        var slaRiskTickets = snapshot.SlaRiskTickets
             .Where(t => t.MinutesRemaining <= slaRiskThresholdMinutes)
             .OrderBy(t => t.MinutesRemaining)
-            .FirstOrDefault();
+            .ToList();
+        var worstSlaRisk = slaRiskTickets.FirstOrDefault();
 
         if (rank1Count > 0)
         {
@@ -32,8 +35,8 @@ public static class PriorityEngine
                 Count = rank1Count,
                 Rank2Count = rank2Count,
                 Rank3Count = rank3Count,
-                SlaRiskTicketId = worstSlaRisk?.TicketId,
-                SlaRiskMinutesRemaining = worstSlaRisk?.MinutesRemaining
+                SlaRiskCount = slaRiskTickets.Count,
+                SlaRiskWorstMinutesRemaining = worstSlaRisk?.MinutesRemaining
             };
         }
 
@@ -41,8 +44,8 @@ public static class PriorityEngine
         {
             return new SlaWarningDashboardState
             {
-                TicketId = worstSlaRisk.TicketId,
-                MinutesRemaining = worstSlaRisk.MinutesRemaining
+                Count = slaRiskTickets.Count,
+                WorstMinutesRemaining = worstSlaRisk.MinutesRemaining
             };
         }
 

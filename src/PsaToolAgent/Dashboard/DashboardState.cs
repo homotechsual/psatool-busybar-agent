@@ -12,24 +12,28 @@ public sealed record NormalDashboardState : DashboardState
     public int UnassignedCount { get; init; }
 }
 
+/// <summary>Every ticket within the SLA-risk threshold, summarized as a count plus the worst
+/// (soonest-to-breach, or already-breached) one's remaining time — not just a single representative
+/// ticket, so the display doesn't silently drop how many others are also at risk.</summary>
 public sealed record SlaWarningDashboardState : DashboardState
 {
-    public required string TicketId { get; init; }
-    public required int MinutesRemaining { get; init; }
+    public required int Count { get; init; }
+    public required int WorstMinutesRemaining { get; init; }
 }
 
 /// <summary>Covers both the "rank-1 tickets open" and "VIP tickets open" cases — <see cref="Reason"/>
 /// distinguishes which triggered it (e.g. "P1 OPEN" or "VIP OPEN"). Also carries the rank-2/rank-3
 /// counts, and — since P1 always outranks SLA risk in the precedence order, which would otherwise
-/// hide a genuinely breaching ticket entirely — the worst SLA-risk ticket too, if one exists
-/// alongside whatever triggered CRITICAL. All independent of the trigger condition, so the display
-/// can cycle through everything relevant rather than showing only the one thing that fired.</summary>
+/// hide breaching tickets entirely — a summary of any SLA-risk tickets too (count plus the worst
+/// one's remaining time), if any exist alongside whatever triggered CRITICAL. All independent of
+/// the trigger condition, so the display can cycle through everything relevant rather than showing
+/// only the one thing that fired.</summary>
 public sealed record CriticalDashboardState : DashboardState
 {
     public required string Reason { get; init; }
     public required int Count { get; init; }
     public int Rank2Count { get; init; }
     public int Rank3Count { get; init; }
-    public string? SlaRiskTicketId { get; init; }
-    public int? SlaRiskMinutesRemaining { get; init; }
+    public int SlaRiskCount { get; init; }
+    public int? SlaRiskWorstMinutesRemaining { get; init; }
 }

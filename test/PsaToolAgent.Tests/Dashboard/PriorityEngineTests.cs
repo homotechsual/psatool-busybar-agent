@@ -61,8 +61,8 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var slaWarning = Assert.IsType<SlaWarningDashboardState>(state);
-        Assert.Equal("101", slaWarning.TicketId);
-        Assert.Equal(45, slaWarning.MinutesRemaining);
+        Assert.Equal(1, slaWarning.Count);
+        Assert.Equal(45, slaWarning.WorstMinutesRemaining);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class PriorityEngineTests
     }
 
     [Fact]
-    public void Evaluate_PicksMostUrgentSlaTicket_WhenMultiplePresent()
+    public void Evaluate_SlaWarning_CountsAllAtRiskTickets_AndReportsTheWorstOnesTime()
     {
         var snapshot = EmptySnapshot() with
         {
@@ -86,7 +86,8 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var slaWarning = Assert.IsType<SlaWarningDashboardState>(state);
-        Assert.Equal("102", slaWarning.TicketId);
+        Assert.Equal(2, slaWarning.Count);
+        Assert.Equal(10, slaWarning.WorstMinutesRemaining);
     }
 
     [Fact]
@@ -136,13 +137,13 @@ public class PriorityEngineTests
     }
 
     [Fact]
-    public void Evaluate_Critical_CarriesSlaRiskTicket_SoAP1AlertDoesNotHideABreachingTicket()
+    public void Evaluate_Critical_CarriesAllSlaRiskTickets_SoAP1AlertDoesNotHideBreaches()
     {
         var snapshot = new PsaSnapshot
         {
             OpenTicketCount = 10,
             PriorityCounts = new Dictionary<int, int> { [1] = 1 },
-            SlaRiskTickets = new[] { new SlaRiskTicket("101", 5) },
+            SlaRiskTickets = new[] { new SlaRiskTicket("101", 45), new SlaRiskTicket("102", 5) },
             UnassignedTicketCount = 0,
             VipTickets = Array.Empty<VipTicket>()
         };
@@ -151,12 +152,12 @@ public class PriorityEngineTests
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
         Assert.Equal("P1 OPEN", critical.Reason);
-        Assert.Equal("101", critical.SlaRiskTicketId);
-        Assert.Equal(5, critical.SlaRiskMinutesRemaining);
+        Assert.Equal(2, critical.SlaRiskCount);
+        Assert.Equal(5, critical.SlaRiskWorstMinutesRemaining);
     }
 
     [Fact]
-    public void Evaluate_Critical_LeavesSlaRiskTicketNull_WhenNoTicketIsWithinThreshold()
+    public void Evaluate_Critical_LeavesSlaRiskCountZero_WhenNoTicketIsWithinThreshold()
     {
         var snapshot = new PsaSnapshot
         {
@@ -170,8 +171,8 @@ public class PriorityEngineTests
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
-        Assert.Null(critical.SlaRiskTicketId);
-        Assert.Null(critical.SlaRiskMinutesRemaining);
+        Assert.Equal(0, critical.SlaRiskCount);
+        Assert.Null(critical.SlaRiskWorstMinutesRemaining);
     }
 
     [Fact]
