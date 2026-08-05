@@ -9,6 +9,10 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     public HttpRequestMessage? LastRequest => Requests.Count > 0 ? Requests[^1] : null;
     public string? LastRequestBody { get; private set; }
 
+    /// <summary>Every request body seen so far, in order — unlike <see cref="LastRequestBody"/>,
+    /// lets a test verify content varied across several requests (e.g. a cycling display).</summary>
+    public List<string?> RequestBodies { get; } = new();
+
     /// <summary>Status code and body returned for every request, unless <see cref="Respond"/> is set.</summary>
     public HttpStatusCode ResponseStatusCode { get; set; } = HttpStatusCode.OK;
     public string ResponseBody { get; set; } = "{}";
@@ -22,6 +26,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     {
         Requests.Add(request);
         LastRequestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+        RequestBodies.Add(LastRequestBody);
 
         if (Respond is not null)
         {

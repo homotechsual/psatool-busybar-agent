@@ -39,6 +39,21 @@ public class PriorityEngineTests
     }
 
     [Fact]
+    public void Evaluate_Critical_CarriesRank2AndRank3Counts_ForDisplayCycling()
+    {
+        var snapshot = EmptySnapshot() with
+        {
+            PriorityCounts = new Dictionary<int, int> { [1] = 3, [2] = 7, [3] = 2 }
+        };
+
+        var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
+
+        var critical = Assert.IsType<CriticalDashboardState>(state);
+        Assert.Equal(7, critical.Rank2Count);
+        Assert.Equal(2, critical.Rank3Count);
+    }
+
+    [Fact]
     public void Evaluate_ReturnsSlaWarning_WhenTicketBreachesWithinThreshold()
     {
         var snapshot = EmptySnapshot() with { SlaRiskTickets = new[] { new SlaRiskTicket("101", 45) } };
@@ -77,13 +92,18 @@ public class PriorityEngineTests
     [Fact]
     public void Evaluate_ReturnsCritical_WhenVipTicketsPresent()
     {
-        var snapshot = EmptySnapshot() with { VipTickets = new[] { new VipTicket("201", "Acme Corp") } };
+        var snapshot = EmptySnapshot() with
+        {
+            PriorityCounts = new Dictionary<int, int> { [2] = 4 },
+            VipTickets = new[] { new VipTicket("201", "Acme Corp") }
+        };
 
         var state = PriorityEngine.Evaluate(snapshot, slaRiskThresholdMinutes: 60);
 
         var critical = Assert.IsType<CriticalDashboardState>(state);
         Assert.Equal("VIP OPEN", critical.Reason);
         Assert.Equal(1, critical.Count);
+        Assert.Equal(4, critical.Rank2Count);
     }
 
     [Fact]

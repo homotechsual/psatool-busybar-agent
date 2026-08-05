@@ -31,10 +31,11 @@ public class PollingBackgroundServiceTests
         var handler = new FakeHttpMessageHandler { ResponseBody = "{\"result\":\"OK\"}" };
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://10.0.4.20/") };
         var bar = new Busy.Bar.BusyBar(http, new Busy.Bar.BusyBarOptions());
-        var renderer = new BusyBarRenderer(bar, Options.Create(new DashboardOptions()));
+        var dashboardOptions = Options.Create(new DashboardOptions());
+        var renderer = new BusyBarRenderer(bar, dashboardOptions);
         var provider = new StubPsaDataProvider();
         var options = Options.Create(new PsaOptions { Provider = "Stub", PollIntervalSeconds = 60, SlaRiskThresholdMinutes = 60 });
-        var service = new PollingBackgroundService(provider, renderer, options, NullLogger<PollingBackgroundService>.Instance);
+        var service = new PollingBackgroundService(provider, renderer, options, dashboardOptions, NullLogger<PollingBackgroundService>.Instance);
         return (service, handler, provider);
     }
 
@@ -79,14 +80,45 @@ public class PollingBackgroundServiceTests
         };
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://10.0.4.20/") };
         var bar = new Busy.Bar.BusyBar(http, new Busy.Bar.BusyBarOptions());
-        var renderer = new BusyBarRenderer(bar, Options.Create(new DashboardOptions()));
+        var dashboardOptions = Options.Create(new DashboardOptions());
+        var renderer = new BusyBarRenderer(bar, dashboardOptions);
         var provider = new StubPsaDataProvider();
         var options = Options.Create(new PsaOptions { Provider = "Stub", PollIntervalSeconds = 60, SlaRiskThresholdMinutes = 60 });
-        var service = new PollingBackgroundService(provider, renderer, options, NullLogger<PollingBackgroundService>.Instance);
+        var service = new PollingBackgroundService(provider, renderer, options, dashboardOptions, NullLogger<PollingBackgroundService>.Instance);
         await service.StartAsync(CancellationToken.None);
 
         var exception = await Record.ExceptionAsync(() => service.StopAsync(CancellationToken.None));
 
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task PollOnceAsync_CyclesThroughCriticalPages_UntilNextPollInterval()
+    {
+        var handler = new FakeHttpMessageHandler { ResponseBody = "{\"result\":\"OK\"}" };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://10.0.4.20/") };
+        var bar = new Busy.Bar.BusyBar(http, new Busy.Bar.BusyBarOptions());
+        var dashboardOptions = Options.Create(new DashboardOptions { DisplayCycleSeconds = 1 });
+        var renderer = new BusyBarRenderer(bar, dashboardOptions);
+        var provider = new StubPsaDataProvider
+        {
+            OnGetSnapshot = _ => Task.FromResult(new PsaSnapshot
+            {
+                OpenTicketCount = 8,
+                PriorityCounts = new Dictionary<int, int> { [1] = 2, [2] = 5, [3] = 1 },
+                SlaRiskTickets = Array.Empty<SlaRiskTicket>(),
+                UnassignedTicketCount = 0,
+                VipTickets = Array.Empty<VipTicket>()
+            })
+        };
+        var options = Options.Create(new PsaOptions { Provider = "Stub", PollIntervalSeconds = 3, SlaRiskThresholdMinutes = 60 });
+        var service = new PollingBackgroundService(provider, renderer, options, dashboardOptions, NullLogger<PollingBackgroundService>.Instance);
+
+        await service.PollOnceAsync(CancellationToken.None);
+
+        Assert.True(handler.RequestBodies.Count >= 3, $"Expected at least 3 draw calls over the ~3s poll interval at a 1s cycle, got {handler.RequestBodies.Count}");
+        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P1 OPEN\""));
+        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P2 OPEN\""));
+        Assert.Contains(handler.RequestBodies, b => b is not null && b.Contains("\"text\":\"P3 OPEN\""));
     }
 }

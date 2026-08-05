@@ -12,17 +12,20 @@ public sealed class PollingBackgroundService : BackgroundService
     private readonly IPsaDataProvider _provider;
     private readonly BusyBarRenderer _renderer;
     private readonly IOptions<PsaOptions> _options;
+    private readonly IOptions<DashboardOptions> _dashboardOptions;
     private readonly ILogger<PollingBackgroundService> _logger;
 
     public PollingBackgroundService(
         IPsaDataProvider provider,
         BusyBarRenderer renderer,
         IOptions<PsaOptions> options,
+        IOptions<DashboardOptions> dashboardOptions,
         ILogger<PollingBackgroundService> logger)
     {
         _provider = provider;
         _renderer = renderer;
         _options = options;
+        _dashboardOptions = dashboardOptions;
         _logger = logger;
     }
 
@@ -68,12 +71,49 @@ public sealed class PollingBackgroundService : BackgroundService
         {
             var snapshot = await _provider.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
             var state = PriorityEngine.Evaluate(snapshot, _options.Value.SlaRiskThresholdMinutes);
-            await _renderer.RenderAsync(state, snapshot.OrganizationName, cancellationToken).ConfigureAwait(false);
+            await RenderCycleAsync(state, snapshot.OrganizationName, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Dashboard updated: {StateType}", state.GetType().Name);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Poll cycle failed; will retry next interval.");
+        }
+    }
+
+    /// <summary>
+    /// Renders <paramref name="state"/>, and — only for <see cref="CriticalDashboardState"/>, which
+    /// has 3 pages of priority detail (whichever condition triggered it, then P2, then P3) —
+    /// continues cycling through those pages every <see cref="DashboardOptions.DisplayCycleSeconds"/>
+    /// for the rest of this poll interval, so all three tiers get screen time rather than only
+    /// whichever one triggered the alert. NORMAL and SLA WARNING have only one page each, so they're
+    /// drawn once and not revisited until the next poll.
+    /// </summary>
+    private async Task RenderCycleAsync(DashboardState state, string? organizationName, CancellationToken cancellationToken)
+    {
+        if (state is not CriticalDashboardState)
+        {
+            await _renderer.RenderAsync(state, organizationName, cyclePage: 0, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var pollInterval = TimeSpan.FromSeconds(_options.Value.PollIntervalSeconds);
+        using var cycleDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cycleDeadline.CancelAfter(pollInterval);
+        using var cycleTimer = new PeriodicTimer(TimeSpan.FromSeconds(_dashboardOptions.Value.DisplayCycleSeconds));
+
+        var page = 0;
+        try
+        {
+            do
+            {
+                await _renderer.RenderAsync(state, organizationName, page, cycleDeadline.Token).ConfigureAwait(false);
+                page++;
+            } while (await cycleTimer.WaitForNextTickAsync(cycleDeadline.Token).ConfigureAwait(false));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Expected: cycleDeadline.CancelAfter(pollInterval) fired because the next poll is due,
+            // not because the service is shutting down (that case propagates via the outer token).
         }
     }
 }

@@ -27,12 +27,16 @@ public sealed class BusyBarRenderer
     /// <c>portal_title</c>), if the provider supplied one via <see cref="PsaToolAgent.Psa.PsaSnapshot.OrganizationName"/>.
     /// Used as the NORMAL-mode header instead of the configured <see cref="DashboardOptions.HeaderText"/>
     /// when present; ignored by every other <see cref="DashboardState"/>.</param>
-    public Task RenderAsync(DashboardState state, string? organizationName, CancellationToken cancellationToken)
+    /// <param name="cyclePage">Which page to show for a <see cref="CriticalDashboardState"/> — page 0
+    /// is always whichever condition triggered CRITICAL; P2 and P3 pages are added only when that
+    /// tier actually has open tickets, and the caller cycles through however many pages exist,
+    /// wrapping via modulo. Ignored by every other <see cref="DashboardState"/>.</param>
+    public Task RenderAsync(DashboardState state, string? organizationName, int cyclePage, CancellationToken cancellationToken)
         => state switch
         {
             NormalDashboardState normal => RenderNormalAsync(normal, organizationName, cancellationToken),
             SlaWarningDashboardState slaWarning => RenderSlaWarningAsync(slaWarning, cancellationToken),
-            CriticalDashboardState critical => RenderCriticalAsync(critical, cancellationToken),
+            CriticalDashboardState critical => RenderCriticalAsync(critical, cyclePage, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(state))
         };
 
@@ -55,8 +59,24 @@ public sealed class BusyBarRenderer
         return DrawAsync(new[] { "SLA RISK", $"Ticket #{state.TicketId}", thirdLine }, SlaWarningColor, cancellationToken);
     }
 
-    private Task RenderCriticalAsync(CriticalDashboardState state, CancellationToken cancellationToken)
-        => DrawAsync(new[] { "CRITICAL", state.Reason, $"Count:{state.Count}" }, CriticalColor, cancellationToken);
+    private Task RenderCriticalAsync(CriticalDashboardState state, int cyclePage, CancellationToken cancellationToken)
+    {
+        // Page 0 (whatever triggered CRITICAL) is always shown; P2/P3 pages are only added when
+        // that tier actually has open tickets, so the cycle never lands on a pointless "Count: 0".
+        var pages = new List<(string SecondLine, int Count)> { (state.Reason, state.Count) };
+        if (state.Rank2Count > 0)
+        {
+            pages.Add(("P2 OPEN", state.Rank2Count));
+        }
+        if (state.Rank3Count > 0)
+        {
+            pages.Add(("P3 OPEN", state.Rank3Count));
+        }
+
+        var normalizedPage = ((cyclePage % pages.Count) + pages.Count) % pages.Count;
+        var (secondLine, count) = pages[normalizedPage];
+        return DrawAsync(new[] { "CRITICAL", secondLine, $"Count: {count}" }, CriticalColor, cancellationToken);
+    }
 
     private Task DrawAsync(IReadOnlyList<string> lines, string color, CancellationToken cancellationToken)
     {

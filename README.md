@@ -21,6 +21,7 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
 | `Psa:Halo:OrganisationId` | `1` | Halo Organisation whose `portal_title` is used as the dashboard header (fetched once at startup, cached for the process lifetime). Falls back to `Dashboard:HeaderText` if the fetch fails or the org has no portal title set. |
 | `BusyBar:Address` | `10.0.4.20` | Network address of the BUSY Bar device. |
 | `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the NORMAL-mode display, used only when the Halo organisation lookup (`Psa:Halo:OrganisationId`) doesn't produce a header. |
+| `Dashboard:DisplayCycleSeconds` | `5` | How often the CRITICAL display cycles between its P1/P2/P3 pages. Has no effect on NORMAL or SLA WARNING, which have only one page each. |
 
 ## Least privilege
 

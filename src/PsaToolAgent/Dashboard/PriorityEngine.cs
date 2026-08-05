@@ -13,9 +13,11 @@ public static class PriorityEngine
         ArgumentNullException.ThrowIfNull(snapshot);
 
         var rank1Count = snapshot.PriorityCounts.GetValueOrDefault(1);
+        var rank2Count = snapshot.PriorityCounts.GetValueOrDefault(2);
+        var rank3Count = snapshot.PriorityCounts.GetValueOrDefault(3);
         if (rank1Count > 0)
         {
-            return new CriticalDashboardState { Reason = "P1 OPEN", Count = rank1Count };
+            return new CriticalDashboardState { Reason = "P1 OPEN", Count = rank1Count, Rank2Count = rank2Count, Rank3Count = rank3Count };
         }
 
         var worstSlaRisk = snapshot.SlaRiskTickets
@@ -33,13 +35,13 @@ public static class PriorityEngine
 
         if (snapshot.VipTickets.Count > 0)
         {
-            return new CriticalDashboardState { Reason = "VIP OPEN", Count = snapshot.VipTickets.Count };
+            return new CriticalDashboardState { Reason = "VIP OPEN", Count = snapshot.VipTickets.Count, Rank2Count = rank2Count, Rank3Count = rank3Count };
         }
 
         return new NormalDashboardState
         {
             Rank1Count = rank1Count,
-            Rank2Count = snapshot.PriorityCounts.GetValueOrDefault(2),
+            Rank2Count = rank2Count,
             UnassignedCount = snapshot.UnassignedTicketCount
         };
     }
