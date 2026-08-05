@@ -1,0 +1,73 @@
+---
+sidebar_position: 4
+---
+
+# Adding a PSA provider
+
+This app is built around one seam: `IPsaDataProvider`. Halo is the first implementation, not the
+only one. Adding a new PSA means implementing one interface and registering it, not rewriting the
+worker.
+
+## The interface
+
+```csharp
+public interface IPsaDataProvider
+{
+    Task<PsaSnapshot> GetSnapshotAsync(CancellationToken cancellationToken);
+}
+```
+
+One method. Whatever your PSA's API looks like, a new provider's job is to turn its ticket state
+into a `PsaSnapshot`.
+
+## What PsaSnapshot needs
+
+- `OpenTicketCount`: total open tickets.
+- `PriorityCounts`: ticket counts keyed by priority rank, where 1 is the most urgent tier your PSA
+  defines and higher numbers are progressively less urgent. Use a numeric rank rather than your
+  PSA's own label (Halo calls its tiers "Critical", "Urgent", "High"), so the contract stays
+  usable by any future provider regardless of what it calls its own tiers.
+- `PriorityNames` (optional): a display ready name per rank, if your PSA has one to offer, for
+  example Halo's own tier names. This is purely a display enrichment kept separate from
+  `PriorityCounts`. Leave a rank out, or leave the whole dictionary null, and the display falls
+  back to a generic "P1", "P2" style label. If your PSA has no such concept, leave this null.
+- `SlaRiskTickets`: every ticket with a known SLA timer, not filtered by any risk threshold,
+  including tickets with days left and already breached tickets (a negative `MinutesRemaining`).
+  Do not filter by threshold in your provider: `PriorityEngine` is the single place that applies
+  the SLA risk threshold, so filtering here would duplicate, and risk diverging from, that logic.
+- `UnassignedTicketCount`: open tickets with nobody assigned.
+- `VipTickets`: open tickets belonging to a customer your PSA flags as VIP. There is no separate
+  escalation concept; an open VIP customer ticket is the escalation.
+- `OrganizationName` (optional): a display ready organisation or portal name, if your PSA can
+  supply one, for example Halo's `portal_title`. Leave it null if your PSA has no such concept, or
+  the lookup fails; the display falls back to the configured `Dashboard:HeaderText`.
+
+## Registering the provider
+
+`Program.cs` selects which provider runs based on the `Psa:Provider` configuration value:
+
+```csharp
+var psaProviderName = builder.Configuration.GetSection(PsaOptions.SectionName)["Provider"];
+if (string.Equals(psaProviderName, "Halo", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<IPsaDataProvider, HaloPsaDataProvider>((provider, client) =>
+    {
+        var options = provider.GetRequiredService<IOptions<HaloOptions>>().Value;
+        client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
+}
+else
+{
+    throw new InvalidOperationException($"Unknown Psa:Provider '{psaProviderName}'. Supported: Halo.");
+}
+```
+
+Add a new branch alongside the Halo one, registering your implementation against
+`IPsaDataProvider`, then select it by setting `Psa:Provider` to your provider's name.
+
+## Authentication is your provider's own concern
+
+`HaloAuthClient`'s OAuth2 client credentials flow is specific to Halo, not part of the
+`IPsaDataProvider` contract. Your provider authenticates however its PSA requires, whether that is
+OAuth2, an API key, or something else, and keeps that logic to itself.

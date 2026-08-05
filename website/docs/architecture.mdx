@@ -18,7 +18,7 @@ IPsaDataProvider.GetSnapshotAsync()
 
 The pluggable provider seam. One method, `GetSnapshotAsync`, returning a `PsaSnapshot`.
 Implementations are registered in dependency injection, and the `Psa:Provider` configuration
-setting selects which one runs at startup. See [Adding a PSA provider](/architecture) for how to
+setting selects which one runs at startup. See [Adding a PSA provider](/providers) for how to
 implement one.
 
 ### HaloPsaDataProvider
@@ -30,7 +30,7 @@ Halo for the ticket data a `PsaSnapshot` needs.
 ### PsaSnapshot
 
 The provider agnostic data contract: open ticket count, priority counts, SLA risk tickets,
-unassigned ticket count, and VIP customer tickets. See [Adding a PSA provider](/architecture) for
+unassigned ticket count, and VIP customer tickets. See [Adding a PSA provider](/providers) for
 what each field means to a new implementation.
 
 ### PriorityEngine
