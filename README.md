@@ -19,6 +19,9 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
 | `Psa:Halo:ClientId` / `ClientSecret` | — | OAuth2 client-credentials — secrets, set via env/user-secrets. |
 | `Psa:Halo:Scope` | `read:tickets` | OAuth2 scope requested. **Set this to the minimum your Halo API client is actually granted** — see Least Privilege below. |
 | `Psa:Halo:OrganisationId` | `1` | Halo Organisation whose `portal_title` is used as the dashboard header (fetched once at startup, cached for the process lifetime). Falls back to `Dashboard:HeaderText` if the fetch fails or the org has no portal title set. |
+| `Psa:Gorelo:BaseUrl` | — | Your Gorelo tenant's regional API base URL (e.g. `https://api.aue.gorelo.io/` for Australia — see [Gorelo's API docs](https://help.gorelo.io/api-overview) for other regions). |
+| `Psa:Gorelo:ApiKey` | — | Gorelo API key, sent as the `X-API-Key` header — a secret, set via env/user-secrets. |
+| `Psa:Gorelo:PageSize` | `200` | Tickets requested per page when paginating `GET /v1/tickets`. Gorelo's API has no ticket-status filter, so every poll pages through the *entire* ticket set (open and closed) client-side; as implemented this is only suitable for smaller tenants (roughly under 2,000 total tickets). |
 | `BusyBar:Address` | `10.0.4.20` | Network address of the BUSY Bar device. |
 | `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the NORMAL-mode display, used only when the Halo organisation lookup (`Psa:Halo:OrganisationId`) doesn't produce a header. |
 | `Dashboard:DisplayCycleSeconds` | `5` | How often the CRITICAL display cycles between its P1/P2/P3 pages. Has no effect on NORMAL or SLA WARNING, which have only one page each. |
@@ -36,6 +39,27 @@ Set via `appsettings.json`, environment variables (double-underscore nesting, e.
   capabilities (`cap_drop: ALL`), sets `no-new-privileges`, and mounts the root filesystem
   read-only with a `tmpfs` `/tmp`. Don't add `privileged: true` or extra `cap_add` entries to
   `docker-compose.yml` — nothing here needs them.
+- **Gorelo API key**: Gorelo's public API uses a single static key with no documented scoping —
+  unlike Halo's OAuth client, there's no token expiry to limit an exposure window if it leaks.
+  Use a dedicated key if Gorelo's admin UI supports issuing one, and rotate it immediately if ever
+  exposed.
+
+## Gorelo provider notes
+
+Gorelo's public API is considerably thinner than Halo's, which shapes a few `PsaSnapshot` fields
+when `Psa:Provider=Gorelo`:
+
+- **`VipTickets` is always empty** — Gorelo's ticket/client schema has no VIP or customer-tier
+  concept.
+- **`OrganizationName` is always null** — Gorelo has no organization-profile/portal-name endpoint,
+  so the dashboard always falls back to `Dashboard:HeaderText`.
+- **SLA risk reflects first-response only** — Gorelo exposes a single `sla.firstResponse.minutes`
+  timer (no overall resolution-SLA timer like Halo's). Its exact semantics aren't documented in
+  Gorelo's API spec; treated as "minutes remaining until first-response breach" by inference, not
+  confirmed behavior.
+
+See [`docs/superpowers/specs/2026-08-06-gorelo-psa-provider-design.md`](docs/superpowers/specs/2026-08-06-gorelo-psa-provider-design.md)
+for the full rationale behind these decisions.
 
 ## Docker networking
 

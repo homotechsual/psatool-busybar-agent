@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using PsaToolAgent;
 using PsaToolAgent.Display;
 using PsaToolAgent.Psa;
+using PsaToolAgent.Psa.Gorelo;
 using PsaToolAgent.Psa.Halo;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -14,6 +15,10 @@ builder.Services.AddOptions<PsaOptions>()
     .ValidateOnStart();
 builder.Services.AddOptions<HaloOptions>()
     .Bind(builder.Configuration.GetSection(HaloOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<GoreloOptions>()
+    .Bind(builder.Configuration.GetSection(GoreloOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 builder.Services.AddOptions<BusyBarOptions>()
@@ -42,9 +47,19 @@ if (string.Equals(psaProviderName, "Halo", StringComparison.OrdinalIgnoreCase))
         client.Timeout = TimeSpan.FromSeconds(30);
     });
 }
+else if (string.Equals(psaProviderName, "Gorelo", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<IPsaDataProvider, GoreloPsaDataProvider>((provider, client) =>
+    {
+        var options = provider.GetRequiredService<IOptions<GoreloOptions>>().Value;
+        client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        client.DefaultRequestHeaders.Add("X-API-Key", options.ApiKey);
+    });
+}
 else
 {
-    throw new InvalidOperationException($"Unknown Psa:Provider '{psaProviderName}'. Supported: Halo.");
+    throw new InvalidOperationException($"Unknown Psa:Provider '{psaProviderName}'. Supported: Halo, Gorelo.");
 }
 
 // AddHttpClient<HaloAuthClient> / AddHttpClient<IPsaDataProvider, HaloPsaDataProvider> register both as
