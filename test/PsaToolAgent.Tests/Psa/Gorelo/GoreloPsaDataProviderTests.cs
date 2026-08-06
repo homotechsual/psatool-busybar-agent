@@ -138,14 +138,13 @@ public class GoreloPsaDataProviderTests
     }
 
     [Fact]
-    public async Task GetSnapshotAsync_SendsApiKeyHeader_AndMapsASinglePageOfTickets()
+    public async Task GetSnapshotAsync_MapsASinglePageOfTickets()
     {
         var handler = new FakeHttpMessageHandler
         {
             ResponseBody = "{\"data\":[{\"id\":\"t1\",\"displayNumber\":\"T-1\",\"leadAssigneeId\":3,\"closedOn\":null,\"priority\":{\"id\":10,\"name\":\"Urgent\"},\"sla\":null}],\"nextCursor\":null,\"hasMore\":false}"
         };
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.gorelo.io/") };
-        http.DefaultRequestHeaders.Add("X-API-Key", "test-key");
         var options = Options.Create(new GoreloOptions { BaseUrl = "https://example.gorelo.io/", ApiKey = "test-key" });
         var provider = new GoreloPsaDataProvider(http, options, NullLogger<GoreloPsaDataProvider>.Instance);
 
@@ -153,7 +152,6 @@ public class GoreloPsaDataProviderTests
 
         Assert.Equal(1, snapshot.OpenTicketCount);
         Assert.Equal(1, snapshot.PriorityCounts[1]);
-        Assert.Contains(handler.Requests, r => r.Headers.Contains("X-API-Key") && r.Headers.GetValues("X-API-Key").Single() == "test-key");
         Assert.Contains(handler.Requests, r => r.RequestUri!.AbsolutePath.Contains("v1/tickets"));
     }
 
@@ -211,5 +209,31 @@ public class GoreloPsaDataProviderTests
         var provider = new GoreloPsaDataProvider(http, options, NullLogger<GoreloPsaDataProvider>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetSnapshotAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetSnapshotAsync_ThrowsImmediately_WhenHasMoreIsTrueButNextCursorIsMissing()
+    {
+        var requestCount = 0;
+        var handler = new FakeHttpMessageHandler
+        {
+            Respond = request =>
+            {
+                requestCount++;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "{\"data\":[],\"nextCursor\":null,\"hasMore\":true}",
+                        Encoding.UTF8, "application/json")
+                };
+            }
+        };
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.gorelo.io/") };
+        var options = Options.Create(new GoreloOptions { BaseUrl = "https://example.gorelo.io/", ApiKey = "test-key" });
+        var provider = new GoreloPsaDataProvider(http, options, NullLogger<GoreloPsaDataProvider>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetSnapshotAsync(CancellationToken.None));
+
+        Assert.Equal(1, requestCount);
     }
 }

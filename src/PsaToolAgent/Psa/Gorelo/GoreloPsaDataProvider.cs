@@ -54,6 +54,12 @@ public sealed class GoreloPsaDataProvider : IPsaDataProvider
             tickets.AddRange(body.Data);
             cursor = body.NextCursor;
             hasMore = body.HasMore;
+
+            if (hasMore && string.IsNullOrEmpty(cursor))
+            {
+                throw new InvalidOperationException(
+                    "Gorelo reported hasMore=true but returned no nextCursor — aborting to avoid refetching the same page.");
+            }
         } while (hasMore);
 
         LogUnrecognizedPriorityNames(tickets);
@@ -99,6 +105,11 @@ public sealed class GoreloPsaDataProvider : IPsaDataProvider
     ///
     /// VipTickets is always empty and OrganizationName is always null: neither concept exists in
     /// Gorelo's public API as of this implementation.
+    ///
+    /// Unlike <see cref="Halo.HaloPsaDataProvider.MapSnapshot"/>, on-hold/paused tickets are NOT
+    /// excluded here: Gorelo's ticket schema has no reliable on-hold signal (its
+    /// <c>baseStatusId</c> taxonomy is undocumented and tenant-customizable), so a paused Gorelo
+    /// ticket still counts toward every metric below, including P1/SLA/unassigned.
     /// </summary>
     internal static PsaSnapshot MapSnapshot(IReadOnlyList<GoreloTicket> tickets)
     {

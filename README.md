@@ -57,6 +57,11 @@ when `Psa:Provider=Gorelo`:
   timer (no overall resolution-SLA timer like Halo's). Its exact semantics aren't documented in
   Gorelo's API spec; treated as "minutes remaining until first-response breach" by inference, not
   confirmed behavior.
+- **On-hold/paused tickets are not excluded** — unlike Halo (which excludes on-hold tickets from
+  every count so a paused ticket can't drive a P1/SLA/VIP/unassigned signal), Gorelo has no
+  reliable on-hold/paused signal in its ticket schema: its `baseStatusId` taxonomy is undocumented
+  and tenant-customizable, so it isn't safe to key filtering off. A paused Gorelo ticket therefore
+  still counts toward `OpenTicketCount`, `PriorityCounts`, SLA risk, and unassigned counts.
 
 See [`docs/superpowers/specs/2026-08-06-gorelo-psa-provider-design.md`](docs/superpowers/specs/2026-08-06-gorelo-psa-provider-design.md)
 for the full rationale behind these decisions.
