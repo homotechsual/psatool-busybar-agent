@@ -14,7 +14,7 @@ const config: Config = {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
 
-  url: 'https://psatool-busybar-agent.homotechsual.dev',
+  url: 'https://psatool.busy.homotechsual.dev',
   baseUrl: '/',
 
   organizationName: 'homotechsual',
