@@ -17,6 +17,9 @@ real `ClientId` or `ClientSecret` values.
 | `Psa:Halo:ClientId` / `ClientSecret` | (none) | OAuth2 client credentials, set through environment variables or user secrets. |
 | `Psa:Halo:Scope` | `read:tickets` | OAuth2 scope requested. Set this to the minimum your Halo API client is actually granted; see Least privilege on the [Deployment](/deployment) page. |
 | `Psa:Halo:OrganisationId` | `1` | Halo organisation whose `portal_title` is used as the dashboard header, fetched once at startup and cached for the process lifetime. Falls back to `Dashboard:HeaderText` if the fetch fails or the organisation has no portal title set. |
+| `Psa:Gorelo:BaseUrl` | (none) | Your Gorelo tenant's regional API base URL, for example `https://api.aue.gorelo.io/` for Australia — see [Gorelo's API docs](https://help.gorelo.io/api-overview) for other regions. |
+| `Psa:Gorelo:ApiKey` | (none) | Gorelo API key, sent as the `X-API-Key` header — a secret, set through environment variables or user secrets. |
+| `Psa:Gorelo:PageSize` | `200` | Tickets requested per page when paginating `GET /v1/tickets`. Gorelo's API has no ticket-status filter, so every poll pages through the entire ticket set (open and closed) client-side; as implemented this is only suitable for smaller tenants (roughly under 2,000 total tickets). |
 | `BusyBar:Address` | `10.0.4.20` | Network address of the BUSY Bar device. |
 | `Dashboard:HeaderText` | `WRC SERVICE DESK` | First line of the normal mode display, and the third line of each critical mode priority tier page. Used only when the Halo organisation lookup does not produce a header. |
 | `Dashboard:DisplayCycleSeconds` | `5` | How often the critical display cycles between its critical mode pages. Has no effect on normal or SLA warning mode, which each have only one page. |

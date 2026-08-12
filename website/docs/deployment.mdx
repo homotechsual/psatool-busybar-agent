@@ -17,6 +17,10 @@ sidebar_position: 5
   (`cap_drop: ALL`), sets `no-new-privileges`, and mounts the root filesystem read only with a
   `tmpfs` `/tmp`. Do not add `privileged: true` or extra `cap_add` entries to
   `docker-compose.yml`; nothing here needs them.
+- **Gorelo API key**: Gorelo's public API uses a single static key with no documented scoping,
+  unlike Halo's OAuth client, there is no token expiry to limit an exposure window if it leaks.
+  Use a dedicated key if Gorelo's admin UI supports issuing one, and rotate it immediately if ever
+  exposed.
 
 ## Docker networking
 
