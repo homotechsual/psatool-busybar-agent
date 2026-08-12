@@ -1,6 +1,6 @@
 # psatool-busybar-agent
 
-A .NET Worker Service that polls a pluggable PSA provider (Halo first) and drives a physical
+A .NET Worker Service that polls a pluggable PSA provider (Halo and Gorelo) and drives a physical
 BUSY Bar with a priority-ranked helpdesk dashboard. Consumes the
 [`BusyBar`](https://www.nuget.org/packages/BusyBar) NuGet package.
 
